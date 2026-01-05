@@ -3,7 +3,8 @@ export function VCardForm({ data, onChange }) {
     onChange({ ...data, [field]: value });
   };
 
-  const inputClass = "w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent outline-none transition-shadow";
+  const inputClass =
+    "w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent outline-none transition-shadow";
 
   return (
     <div className="space-y-4">
@@ -15,7 +16,7 @@ export function VCardForm({ data, onChange }) {
           <input
             type="text"
             value={data.firstName}
-            onChange={(e) => update('firstName', e.target.value)}
+            onChange={(e) => update("firstName", e.target.value)}
             placeholder="John"
             className={inputClass}
           />
@@ -27,7 +28,7 @@ export function VCardForm({ data, onChange }) {
           <input
             type="text"
             value={data.lastName}
-            onChange={(e) => update('lastName', e.target.value)}
+            onChange={(e) => update("lastName", e.target.value)}
             placeholder="Doe"
             className={inputClass}
           />
@@ -41,7 +42,7 @@ export function VCardForm({ data, onChange }) {
         <input
           type="tel"
           value={data.phone}
-          onChange={(e) => update('phone', e.target.value)}
+          onChange={(e) => update("phone", e.target.value)}
           placeholder="+1 234 567 8900"
           className={inputClass}
         />
@@ -54,8 +55,8 @@ export function VCardForm({ data, onChange }) {
         <input
           type="email"
           value={data.email}
-          onChange={(e) => update('email', e.target.value)}
-          placeholder="john@example.com"
+          onChange={(e) => update("email", e.target.value)}
+          placeholder="john@frontsail.ai"
           className={inputClass}
         />
       </div>
@@ -68,7 +69,7 @@ export function VCardForm({ data, onChange }) {
           <input
             type="text"
             value={data.org}
-            onChange={(e) => update('org', e.target.value)}
+            onChange={(e) => update("org", e.target.value)}
             placeholder="Company Inc."
             className={inputClass}
           />
@@ -80,7 +81,7 @@ export function VCardForm({ data, onChange }) {
           <input
             type="text"
             value={data.title}
-            onChange={(e) => update('title', e.target.value)}
+            onChange={(e) => update("title", e.target.value)}
             placeholder="Manager"
             className={inputClass}
           />
@@ -94,8 +95,8 @@ export function VCardForm({ data, onChange }) {
         <input
           type="url"
           value={data.website}
-          onChange={(e) => update('website', e.target.value)}
-          placeholder="example.com"
+          onChange={(e) => update("website", e.target.value)}
+          placeholder="frontsail.ai"
           className={inputClass}
         />
       </div>

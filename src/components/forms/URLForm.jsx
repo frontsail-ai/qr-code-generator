@@ -8,7 +8,7 @@ export function URLForm({ data, onChange }) {
         type="url"
         value={data.url}
         onChange={(e) => onChange({ ...data, url: e.target.value })}
-        placeholder="example.com"
+        placeholder="frontsail.ai"
         className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent outline-none transition-shadow"
       />
     </div>
