@@ -1,4 +1,4 @@
-# QR Code Generator
+# QR Code Generator [![CI](https://github.com/frontsail-ai/qr-code-generator/actions/workflows/ci.yml/badge.svg)](https://github.com/frontsail-ai/qr-code-generator/actions/workflows/ci.yml)
 
 A simple, client-side QR code generator with customization options. No backend required.
 
