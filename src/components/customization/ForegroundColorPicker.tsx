@@ -1,6 +1,13 @@
+import type { GradientType } from "../../types";
 import { GRADIENT_TYPES, PRESET_COLORS } from "../../utils/constants";
 
-function ColorInput({ value, onChange, label }) {
+interface ColorInputProps {
+  value: string;
+  onChange: (value: string) => void;
+  label?: string;
+}
+
+function ColorInput({ value, onChange, label }: ColorInputProps) {
   return (
     <div>
       {label && (
@@ -46,8 +53,18 @@ function ColorInput({ value, onChange, label }) {
   );
 }
 
-function GradientPreview({ color1, color2, gradientType }) {
-  let background;
+interface GradientPreviewProps {
+  color1: string;
+  color2: string;
+  gradientType: GradientType;
+}
+
+function GradientPreview({
+  color1,
+  color2,
+  gradientType,
+}: GradientPreviewProps) {
+  let background: string;
 
   if (gradientType === "none") {
     background = color1;
@@ -57,6 +74,8 @@ function GradientPreview({ color1, color2, gradientType }) {
     background = `linear-gradient(45deg, ${color1} 0%, ${color2} 100%)`;
   } else if (gradientType === "linear-tl-br") {
     background = `linear-gradient(135deg, ${color1} 0%, ${color2} 100%)`;
+  } else {
+    background = color1;
   }
 
   return (
@@ -68,6 +87,15 @@ function GradientPreview({ color1, color2, gradientType }) {
   );
 }
 
+interface ForegroundColorPickerProps {
+  color1: string;
+  color2: string;
+  gradientType: GradientType;
+  onColor1Change: (value: string) => void;
+  onColor2Change: (value: string) => void;
+  onGradientTypeChange: (value: GradientType) => void;
+}
+
 export function ForegroundColorPicker({
   color1,
   color2,
@@ -75,7 +103,7 @@ export function ForegroundColorPicker({
   onColor1Change,
   onColor2Change,
   onGradientTypeChange,
-}) {
+}: ForegroundColorPickerProps) {
   const isGradient = gradientType !== "none";
 
   return (

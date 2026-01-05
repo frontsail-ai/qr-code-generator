@@ -1,4 +1,6 @@
-export function TextForm({ data, onChange }) {
+import type { FormComponentProps, TextFormData } from "../../types";
+
+export function TextForm({ data, onChange }: FormComponentProps<TextFormData>) {
   const maxLength = 1000;
   const charCount = data.content?.length || 0;
 

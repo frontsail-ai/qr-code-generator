@@ -1,10 +1,23 @@
 import { useMemo, useRef } from "react";
 import { useDebounce } from "../hooks/useDebounce";
 import { useQRCode } from "../hooks/useQRCode";
+import type { Customization, FormDataMap, QRType } from "../types";
 import { formatQRData } from "../utils/qrDataFormatters";
 
-export function QRPreview({ qrType, formData, customization, onSave }) {
-  const containerRef = useRef(null);
+interface QRPreviewProps {
+  qrType: QRType;
+  formData: FormDataMap;
+  customization: Customization;
+  onSave?: () => void;
+}
+
+export function QRPreview({
+  qrType,
+  formData,
+  customization,
+  onSave,
+}: QRPreviewProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const qrData = useMemo(() => {
     return formatQRData(qrType, formData[qrType]);

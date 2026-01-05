@@ -1,6 +1,12 @@
+import type { DotType } from "../../types";
 import { DOT_TYPES } from "../../utils/constants";
 
-export function DotStyleSelector({ value, onChange }) {
+interface DotStyleSelectorProps {
+  value: DotType;
+  onChange: (value: DotType) => void;
+}
+
+export function DotStyleSelector({ value, onChange }: DotStyleSelectorProps) {
   return (
     <div>
       <label className="block text-sm font-medium text-gray-700 mb-2">

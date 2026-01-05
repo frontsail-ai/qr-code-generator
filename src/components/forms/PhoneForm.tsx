@@ -1,4 +1,9 @@
-export function PhoneForm({ data, onChange }) {
+import type { FormComponentProps, PhoneFormData } from "../../types";
+
+export function PhoneForm({
+  data,
+  onChange,
+}: FormComponentProps<PhoneFormData>) {
   return (
     <div>
       <label className="block text-sm font-medium text-gray-700 mb-1.5">

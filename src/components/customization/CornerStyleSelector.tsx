@@ -1,11 +1,19 @@
+import type { CornerDotType, CornerSquareType } from "../../types";
 import { CORNER_DOT_TYPES, CORNER_SQUARE_TYPES } from "../../utils/constants";
+
+interface CornerStyleSelectorProps {
+  squareValue: CornerSquareType;
+  dotValue: CornerDotType;
+  onSquareChange: (value: CornerSquareType) => void;
+  onDotChange: (value: CornerDotType) => void;
+}
 
 export function CornerStyleSelector({
   squareValue,
   dotValue,
   onSquareChange,
   onDotChange,
-}) {
+}: CornerStyleSelectorProps) {
   return (
     <div className="space-y-4">
       <div>

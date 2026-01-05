@@ -1,5 +1,10 @@
-export function VCardForm({ data, onChange }) {
-  const update = (field, value) => {
+import type { FormComponentProps, VCardFormData } from "../../types";
+
+export function VCardForm({
+  data,
+  onChange,
+}: FormComponentProps<VCardFormData>) {
+  const update = (field: keyof VCardFormData, value: string) => {
     onChange({ ...data, [field]: value });
   };
 

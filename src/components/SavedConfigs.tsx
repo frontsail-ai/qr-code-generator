@@ -1,7 +1,8 @@
+import type { Customization, SavedConfig } from "../types";
 import { QR_TYPES } from "../utils/constants";
 import { formatQRData } from "../utils/qrDataFormatters";
 
-function getColorStyle(customization) {
+function getColorStyle(customization: Customization): React.CSSProperties {
   const { foregroundColor, foregroundColor2, gradientType } = customization;
 
   if (gradientType === "none" || !gradientType) {
@@ -29,7 +30,13 @@ function getColorStyle(customization) {
   return { backgroundColor: foregroundColor };
 }
 
-function ConfigPreview({ config, onRestore, onDelete }) {
+interface ConfigPreviewProps {
+  config: SavedConfig;
+  onRestore: (config: SavedConfig) => void;
+  onDelete: (id: string) => void;
+}
+
+function ConfigPreview({ config, onRestore, onDelete }: ConfigPreviewProps) {
   const typeLabel =
     QR_TYPES.find((t) => t.value === config.qrType)?.label || config.qrType;
   const data = formatQRData(config.qrType, config.formData[config.qrType]);
@@ -107,7 +114,19 @@ function ConfigPreview({ config, onRestore, onDelete }) {
   );
 }
 
-export function SavedConfigs({ configs, onRestore, onDelete, onClearAll }) {
+interface SavedConfigsProps {
+  configs: SavedConfig[];
+  onRestore: (config: SavedConfig) => void;
+  onDelete: (id: string) => void;
+  onClearAll: () => void;
+}
+
+export function SavedConfigs({
+  configs,
+  onRestore,
+  onDelete,
+  onClearAll,
+}: SavedConfigsProps) {
   if (configs.length === 0) {
     return (
       <div>

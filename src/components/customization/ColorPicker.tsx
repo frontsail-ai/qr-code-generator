@@ -1,6 +1,12 @@
 import { PRESET_COLORS } from "../../utils/constants";
 
-export function ColorPicker({ label, value, onChange }) {
+interface ColorPickerProps {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+}
+
+export function ColorPicker({ label, value, onChange }: ColorPickerProps) {
   return (
     <div>
       <label className="block text-sm font-medium text-gray-700 mb-2">

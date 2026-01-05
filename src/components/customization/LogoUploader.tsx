@@ -1,9 +1,15 @@
+import type { ChangeEvent } from "react";
 import { useRef } from "react";
 
-export function LogoUploader({ value, onChange }) {
-  const inputRef = useRef(null);
+interface LogoUploaderProps {
+  value: string | null;
+  onChange: (value: string | null) => void;
+}
 
-  const handleFileChange = (e) => {
+export function LogoUploader({ value, onChange }: LogoUploaderProps) {
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -19,7 +25,7 @@ export function LogoUploader({ value, onChange }) {
 
     const reader = new FileReader();
     reader.onload = () => {
-      onChange(reader.result);
+      onChange(reader.result as string);
     };
     reader.readAsDataURL(file);
   };

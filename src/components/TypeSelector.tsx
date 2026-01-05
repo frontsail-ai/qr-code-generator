@@ -1,6 +1,8 @@
+import type { JSX } from "react";
+import type { QRType } from "../types";
 import { QR_TYPES } from "../utils/constants";
 
-const icons = {
+const icons: Record<string, JSX.Element> = {
   link: (
     <svg
       className="w-4 h-4"
@@ -78,7 +80,12 @@ const icons = {
   ),
 };
 
-export function TypeSelector({ value, onChange }) {
+interface TypeSelectorProps {
+  value: QRType;
+  onChange: (value: QRType) => void;
+}
+
+export function TypeSelector({ value, onChange }: TypeSelectorProps) {
   return (
     <section className="overflow-x-auto pb-2 -mx-4 px-4">
       <div className="flex gap-2 min-w-max">

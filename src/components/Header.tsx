@@ -1,4 +1,9 @@
-export function Header({ onToggleSidebar, sidebarOpen }) {
+interface HeaderProps {
+  onToggleSidebar: () => void;
+  sidebarOpen: boolean;
+}
+
+export function Header({ onToggleSidebar, sidebarOpen }: HeaderProps) {
   return (
     <header className="sticky top-0 bg-white border-b border-gray-200 z-10">
       <div className="flex items-center px-4 py-4">

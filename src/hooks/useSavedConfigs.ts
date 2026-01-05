@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
+import type { SaveConfigInput, SavedConfig } from "../types";
 
 const STORAGE_KEY = "qr-saved-configs";
 
-function loadFromStorage() {
+function loadFromStorage(): SavedConfig[] {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
-      return JSON.parse(stored);
+      return JSON.parse(stored) as SavedConfig[];
     }
   } catch (e) {
     console.error("Failed to load saved configs:", e);
@@ -14,7 +15,7 @@ function loadFromStorage() {
   return [];
 }
 
-function configsMatch(a, b) {
+function configsMatch(a: SaveConfigInput, b: SaveConfigInput): boolean {
   // Compare qrType, formData, and customization (excluding id and timestamp)
   return (
     a.qrType === b.qrType &&
@@ -23,9 +24,17 @@ function configsMatch(a, b) {
   );
 }
 
-export function useSavedConfigs() {
+interface UseSavedConfigsReturn {
+  savedConfigs: SavedConfig[];
+  saveConfig: (config: SaveConfigInput) => void;
+  deleteConfig: (id: string) => void;
+  clearAllConfigs: () => void;
+}
+
+export function useSavedConfigs(): UseSavedConfigsReturn {
   // Initialize state from localStorage (lazy initialization)
-  const [savedConfigs, setSavedConfigs] = useState(loadFromStorage);
+  const [savedConfigs, setSavedConfigs] =
+    useState<SavedConfig[]>(loadFromStorage);
 
   // Save to localStorage whenever configs change
   useEffect(() => {
@@ -36,7 +45,7 @@ export function useSavedConfigs() {
     }
   }, [savedConfigs]);
 
-  const saveConfig = useCallback((config) => {
+  const saveConfig = useCallback((config: SaveConfigInput) => {
     setSavedConfigs((prev) => {
       // Check if an identical config already exists
       const existingIndex = prev.findIndex((c) => configsMatch(c, config));
@@ -44,7 +53,7 @@ export function useSavedConfigs() {
       if (existingIndex !== -1) {
         // Move existing config to top with updated timestamp
         const existing = prev[existingIndex];
-        const updated = {
+        const updated: SavedConfig = {
           ...existing,
           timestamp: new Date().toISOString(),
         };
@@ -56,7 +65,7 @@ export function useSavedConfigs() {
       }
 
       // Create new config
-      const newConfig = {
+      const newConfig: SavedConfig = {
         id: Date.now().toString(),
         timestamp: new Date().toISOString(),
         ...config,
@@ -65,7 +74,7 @@ export function useSavedConfigs() {
     });
   }, []);
 
-  const deleteConfig = useCallback((id) => {
+  const deleteConfig = useCallback((id: string) => {
     setSavedConfigs((prev) => prev.filter((c) => c.id !== id));
   }, []);
 

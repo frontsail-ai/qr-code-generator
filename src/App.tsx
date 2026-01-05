@@ -12,26 +12,21 @@ import { QRPreview } from "./components/QRPreview";
 import { SavedConfigs } from "./components/SavedConfigs";
 import { TypeSelector } from "./components/TypeSelector";
 import { useSavedConfigs } from "./hooks/useSavedConfigs";
+import type { Customization, FormDataMap, QRType, SavedConfig } from "./types";
 import { DEFAULT_CUSTOMIZATION, DEFAULT_FORM_DATA } from "./utils/constants";
 
-const formComponents = {
-  url: URLForm,
-  email: EmailForm,
-  phone: PhoneForm,
-  text: TextForm,
-  vcard: VCardForm,
-};
-
 function App() {
-  const [qrType, setQRType] = useState("url");
-  const [formData, setFormData] = useState(DEFAULT_FORM_DATA);
-  const [customization, setCustomization] = useState(DEFAULT_CUSTOMIZATION);
+  const [qrType, setQRType] = useState<QRType>("url");
+  const [formData, setFormData] = useState<FormDataMap>(DEFAULT_FORM_DATA);
+  const [customization, setCustomization] = useState<Customization>(
+    DEFAULT_CUSTOMIZATION,
+  );
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const { savedConfigs, saveConfig, deleteConfig, clearAllConfigs } =
     useSavedConfigs();
 
-  const updateFormData = (type, data) => {
+  const updateFormData = <K extends QRType>(type: K, data: FormDataMap[K]) => {
     setFormData((prev) => ({
       ...prev,
       [type]: data,
@@ -46,13 +41,51 @@ function App() {
     });
   }, [qrType, formData, customization, saveConfig]);
 
-  const handleRestore = useCallback((config) => {
+  const handleRestore = useCallback((config: SavedConfig) => {
     setQRType(config.qrType);
     setFormData(config.formData);
     setCustomization(config.customization);
   }, []);
 
-  const FormComponent = formComponents[qrType];
+  const renderForm = () => {
+    switch (qrType) {
+      case "url":
+        return (
+          <URLForm
+            data={formData.url}
+            onChange={(data) => updateFormData("url", data)}
+          />
+        );
+      case "email":
+        return (
+          <EmailForm
+            data={formData.email}
+            onChange={(data) => updateFormData("email", data)}
+          />
+        );
+      case "phone":
+        return (
+          <PhoneForm
+            data={formData.phone}
+            onChange={(data) => updateFormData("phone", data)}
+          />
+        );
+      case "text":
+        return (
+          <TextForm
+            data={formData.text}
+            onChange={(data) => updateFormData("text", data)}
+          />
+        );
+      case "vcard":
+        return (
+          <VCardForm
+            data={formData.vcard}
+            onChange={(data) => updateFormData("vcard", data)}
+          />
+        );
+    }
+  };
 
   const toggleSidebar = useCallback(() => {
     setSidebarOpen((prev) => !prev);
@@ -99,10 +132,7 @@ function App() {
               <h2 className="text-lg font-semibold text-gray-900 mb-4">
                 Content
               </h2>
-              <FormComponent
-                data={formData[qrType]}
-                onChange={(data) => updateFormData(qrType, data)}
-              />
+              {renderForm()}
             </section>
 
             <CustomizationPanel

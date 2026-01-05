@@ -1,12 +1,29 @@
 import QRCodeStyling from "qr-code-styling";
+import type { RefObject } from "react";
 import { useCallback, useEffect, useRef } from "react";
+import type { Customization, GradientType } from "../types";
 
-function buildGradient(gradientType, color1, color2) {
+interface ColorStop {
+  offset: number;
+  color: string;
+}
+
+interface GradientConfig {
+  type: "radial" | "linear";
+  rotation?: number;
+  colorStops: ColorStop[];
+}
+
+function buildGradient(
+  gradientType: GradientType,
+  color1: string,
+  color2: string,
+): GradientConfig | undefined {
   if (gradientType === "none") {
     return undefined;
   }
 
-  const colorStops = [
+  const colorStops: ColorStop[] = [
     { offset: 0, color: color1 },
     { offset: 1, color: color2 },
   ];
@@ -33,7 +50,7 @@ function buildGradient(gradientType, color1, color2) {
   };
 }
 
-function mapOptionsToQRConfig(options) {
+function mapOptionsToQRConfig(options: Customization) {
   const gradient = buildGradient(
     options.gradientType,
     options.foregroundColor,
@@ -63,15 +80,24 @@ function mapOptionsToQRConfig(options) {
     },
     image: options.logo || undefined,
     imageOptions: {
-      crossOrigin: "anonymous",
+      crossOrigin: "anonymous" as const,
       margin: 8,
       imageSize: 0.4,
     },
   };
 }
 
-export function useQRCode(containerRef, data, options) {
-  const qrCodeRef = useRef(null);
+interface UseQRCodeReturn {
+  downloadPNG: () => void;
+  downloadSVG: () => void;
+}
+
+export function useQRCode(
+  containerRef: RefObject<HTMLDivElement | null>,
+  data: string,
+  options: Customization,
+): UseQRCodeReturn {
+  const qrCodeRef = useRef<QRCodeStyling | null>(null);
 
   // Create/recreate QR code instance when data or options change
   // We recreate instead of update() because qr-code-styling doesn't properly

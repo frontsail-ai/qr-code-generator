@@ -1,5 +1,19 @@
-const formatters = {
-  url: (data) => {
+import type {
+  EmailFormData,
+  FormDataMap,
+  PhoneFormData,
+  QRType,
+  TextFormData,
+  URLFormData,
+  VCardFormData,
+} from "../types";
+
+type FormatterMap = {
+  [K in QRType]: (data: FormDataMap[K]) => string;
+};
+
+const formatters: FormatterMap = {
+  url: (data: URLFormData) => {
     const url = (data.url || "").trim();
     if (!url) return "";
     if (!url.match(/^https?:\/\//i)) {
@@ -8,7 +22,7 @@ const formatters = {
     return url;
   },
 
-  email: (data) => {
+  email: (data: EmailFormData) => {
     const { to, subject, body } = data;
     if (!to) return "";
     const params = new URLSearchParams();
@@ -18,14 +32,14 @@ const formatters = {
     return `mailto:${to}${queryString ? `?${queryString}` : ""}`;
   },
 
-  phone: (data) => {
+  phone: (data: PhoneFormData) => {
     const number = (data.number || "").replace(/\s+/g, "");
     return number ? `tel:${number}` : "";
   },
 
-  text: (data) => data.content || "",
+  text: (data: TextFormData) => data.content || "",
 
-  vcard: (data) => {
+  vcard: (data: VCardFormData) => {
     const lines = ["BEGIN:VCARD", "VERSION:3.0"];
 
     if (data.firstName || data.lastName) {
@@ -51,6 +65,10 @@ const formatters = {
   },
 };
 
-export function formatQRData(type, data) {
-  return formatters[type]?.(data) || "";
+export function formatQRData<K extends QRType>(
+  type: K,
+  data: FormDataMap[K],
+): string {
+  const formatter = formatters[type];
+  return formatter ? formatter(data) : "";
 }

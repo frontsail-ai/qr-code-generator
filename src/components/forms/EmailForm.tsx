@@ -1,5 +1,10 @@
-export function EmailForm({ data, onChange }) {
-  const update = (field, value) => {
+import type { EmailFormData, FormComponentProps } from "../../types";
+
+export function EmailForm({
+  data,
+  onChange,
+}: FormComponentProps<EmailFormData>) {
+  const update = (field: keyof EmailFormData, value: string) => {
     onChange({ ...data, [field]: value });
   };
 
