@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+    branches: [master, main]
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'yarn'
+
+      - name: Install just
+        uses: extractions/setup-just@v2
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run lint
+        run: just lint-ci
+
+      - name: Run tests
+        run: just test
+
+      - name: Build
+        run: just build
