@@ -474,5 +474,61 @@ test.describe('QR Code Generator', () => {
       // Config should still be there
       await expect(page.getByRole('button', { name: 'Restore' })).toBeVisible();
     });
+
+    test('should not create duplicate entry when restoring and downloading unchanged config', async ({ page }) => {
+      // Create a saved config
+      await page.getByPlaceholder('example.com').fill('no-duplicate.com');
+      await page.getByRole('button', { name: '#DC2626' }).first().click();
+      await page.waitForTimeout(400);
+
+      let downloadPromise = page.waitForEvent('download');
+      await page.getByRole('button', { name: 'Download PNG' }).click();
+      await downloadPromise;
+
+      // Should have 1 saved config
+      await expect(page.getByRole('button', { name: 'Restore' })).toHaveCount(1);
+
+      // Make some other change to the form
+      await page.getByPlaceholder('example.com').fill('other-url.com');
+      await page.getByRole('button', { name: '#000000' }).first().click();
+
+      // Restore the saved config
+      await page.getByRole('button', { name: 'Restore' }).click();
+
+      // Download again without making any changes
+      await page.waitForTimeout(400);
+      downloadPromise = page.waitForEvent('download');
+      await page.getByRole('button', { name: 'Download PNG' }).click();
+      await downloadPromise;
+
+      // Should still have only 1 saved config (no duplicate created)
+      await expect(page.getByRole('button', { name: 'Restore' })).toHaveCount(1);
+    });
+
+    test('should create new entry when restoring and downloading modified config', async ({ page }) => {
+      // Create a saved config
+      await page.getByPlaceholder('example.com').fill('original-url.com');
+      await page.waitForTimeout(400);
+
+      let downloadPromise = page.waitForEvent('download');
+      await page.getByRole('button', { name: 'Download PNG' }).click();
+      await downloadPromise;
+
+      // Should have 1 saved config
+      await expect(page.getByRole('button', { name: 'Restore' })).toHaveCount(1);
+
+      // Restore, then modify
+      await page.getByRole('button', { name: 'Restore' }).click();
+      await page.getByPlaceholder('example.com').fill('modified-url.com');
+
+      // Download the modified config
+      await page.waitForTimeout(400);
+      downloadPromise = page.waitForEvent('download');
+      await page.getByRole('button', { name: 'Download PNG' }).click();
+      await downloadPromise;
+
+      // Should now have 2 saved configs (new entry for modified config)
+      await expect(page.getByRole('button', { name: 'Restore' })).toHaveCount(2);
+    });
   });
 });
