@@ -236,4 +236,138 @@ test.describe('QR Code Generator', () => {
       await expect(page.getByText('Customize')).toBeVisible();
     });
   });
+
+  test.describe('Saved Configurations', () => {
+    test.beforeEach(async ({ page }) => {
+      // Clear localStorage before each test
+      await page.evaluate(() => localStorage.clear());
+      await page.reload();
+    });
+
+    test('should display empty saved configs message initially', async ({ page }) => {
+      await expect(page.getByText('History')).toBeVisible();
+      await expect(page.getByText('No saved configurations yet')).toBeVisible();
+    });
+
+    test('should save configuration when downloading PNG', async ({ page }) => {
+      // Enter a URL
+      await page.getByPlaceholder('example.com').fill('test-url.com');
+
+      // Wait for debounce
+      await page.waitForTimeout(400);
+
+      // Click download (this should save the config)
+      const downloadPromise = page.waitForEvent('download');
+      await page.getByRole('button', { name: 'Download PNG' }).click();
+      await downloadPromise;
+
+      // Should now show the saved config
+      await expect(page.getByText('No saved configurations yet')).not.toBeVisible();
+      await expect(page.getByRole('button', { name: 'Restore' })).toBeVisible();
+    });
+
+    test('should save configuration when downloading SVG', async ({ page }) => {
+      // Enter a URL
+      await page.getByPlaceholder('example.com').fill('svg-test.com');
+
+      // Wait for debounce
+      await page.waitForTimeout(400);
+
+      // Click download SVG
+      const downloadPromise = page.waitForEvent('download');
+      await page.getByRole('button', { name: 'Download SVG' }).click();
+      await downloadPromise;
+
+      // Should now show the saved config
+      await expect(page.getByRole('button', { name: 'Restore' })).toBeVisible();
+    });
+
+    test('should restore saved configuration', async ({ page }) => {
+      // Create a config with specific settings
+      await page.getByPlaceholder('example.com').fill('restore-test.com');
+      await page.getByRole('button', { name: '#DC2626' }).first().click(); // Red color
+
+      await page.waitForTimeout(400);
+
+      // Save by downloading
+      const downloadPromise = page.waitForEvent('download');
+      await page.getByRole('button', { name: 'Download PNG' }).click();
+      await downloadPromise;
+
+      // Clear the form
+      await page.getByPlaceholder('example.com').fill('different-url.com');
+      await page.getByRole('button', { name: '#000000' }).first().click(); // Black color
+
+      // Restore the saved config
+      await page.getByRole('button', { name: 'Restore' }).click();
+
+      // Check values are restored
+      await expect(page.getByPlaceholder('example.com')).toHaveValue('restore-test.com');
+    });
+
+    test('should delete saved configuration', async ({ page }) => {
+      // Create a saved config
+      await page.getByPlaceholder('example.com').fill('delete-test.com');
+      await page.waitForTimeout(400);
+
+      const downloadPromise = page.waitForEvent('download');
+      await page.getByRole('button', { name: 'Download PNG' }).click();
+      await downloadPromise;
+
+      // Verify config is saved
+      await expect(page.getByRole('button', { name: 'Restore' })).toBeVisible();
+
+      // Delete the config
+      await page.getByRole('button', { name: 'Delete' }).click();
+
+      // Should show empty message again
+      await expect(page.getByText('No saved configurations yet')).toBeVisible();
+    });
+
+    test('should clear all saved configurations', async ({ page }) => {
+      // Create multiple saved configs
+      await page.getByPlaceholder('example.com').fill('first.com');
+      await page.waitForTimeout(400);
+      let downloadPromise = page.waitForEvent('download');
+      await page.getByRole('button', { name: 'Download PNG' }).click();
+      await downloadPromise;
+
+      await page.getByPlaceholder('example.com').fill('second.com');
+      await page.waitForTimeout(400);
+      downloadPromise = page.waitForEvent('download');
+      await page.getByRole('button', { name: 'Download PNG' }).click();
+      await downloadPromise;
+
+      // Should have multiple restore buttons
+      await expect(page.getByRole('button', { name: 'Restore' })).toHaveCount(2);
+
+      // Clear all
+      await page.getByRole('button', { name: 'Clear all' }).click();
+
+      // Should show empty message
+      await expect(page.getByText('No saved configurations yet')).toBeVisible();
+    });
+
+    test('should persist saved configs across page reloads', async ({ page }) => {
+      // Create a saved config
+      await page.getByPlaceholder('example.com').fill('persist-test.com');
+      await page.waitForTimeout(400);
+
+      const downloadPromise = page.waitForEvent('download');
+      await page.getByRole('button', { name: 'Download PNG' }).click();
+      await downloadPromise;
+
+      // Wait for React state update and localStorage write
+      await page.waitForTimeout(100);
+
+      // Verify config was saved before reload
+      await expect(page.getByRole('button', { name: 'Restore' })).toBeVisible();
+
+      // Reload the page (don't clear localStorage this time)
+      await page.reload();
+
+      // Config should still be there
+      await expect(page.getByRole('button', { name: 'Restore' })).toBeVisible();
+    });
+  });
 });
