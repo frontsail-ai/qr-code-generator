@@ -31,8 +31,17 @@ export const PRESET_COLORS = [
   '#16A34A', '#7C3AED', '#EA580C', '#0891B2'
 ];
 
+export const GRADIENT_TYPES = [
+  { value: 'none', label: 'Solid' },
+  { value: 'linear-bl-tr', label: '↗', title: 'Bottom-left to top-right' },
+  { value: 'linear-tl-br', label: '↘', title: 'Top-left to bottom-right' },
+  { value: 'radial', label: '◉', title: 'Radial' }
+];
+
 export const DEFAULT_CUSTOMIZATION = {
   foregroundColor: '#000000',
+  foregroundColor2: '#7C3AED',
+  gradientType: 'none',
   backgroundColor: '#FFFFFF',
   dotType: 'square',
   cornerSquareType: 'square',

@@ -141,17 +141,122 @@ test.describe('QR Code Generator', () => {
     });
 
     test('should change foreground color when preset clicked', async ({ page }) => {
-      // Click purple color preset (first set is foreground)
-      await page.getByRole('button', { name: '#7C3AED' }).first().click();
+      // Click red color preset (first set is foreground)
+      await page.getByRole('button', { name: '#DC2626' }).first().click();
 
       // Check that the hex input updated
       const hexInput = page.locator('input[type="text"]').first();
-      await expect(hexInput).toHaveValue('#7C3AED');
+      await expect(hexInput).toHaveValue('#DC2626');
     });
 
     test('should have separate foreground and background color sections', async ({ page }) => {
       await expect(page.getByText('Foreground Color')).toBeVisible();
       await expect(page.getByText('Background Color')).toBeVisible();
+    });
+  });
+
+  test.describe('Gradient Customization', () => {
+    test('should display gradient type options', async ({ page }) => {
+      await expect(page.getByRole('button', { name: 'Solid' })).toBeVisible();
+      await expect(page.getByRole('button', { name: '↗' })).toBeVisible();
+      await expect(page.getByRole('button', { name: '↘' })).toBeVisible();
+      await expect(page.getByRole('button', { name: '◉' })).toBeVisible();
+    });
+
+    test('should show second color picker when gradient is selected', async ({ page }) => {
+      // Initially should not show end color label
+      await expect(page.getByText('End color')).not.toBeVisible();
+
+      // Click linear gradient option
+      await page.getByRole('button', { name: '↗' }).click();
+
+      // Should now show start and end color labels
+      await expect(page.getByText('Start color')).toBeVisible();
+      await expect(page.getByText('End color')).toBeVisible();
+    });
+
+    test('should hide second color when switching back to solid', async ({ page }) => {
+      // Select gradient
+      await page.getByRole('button', { name: '↗' }).click();
+      await expect(page.getByText('End color')).toBeVisible();
+
+      // Switch back to solid
+      await page.getByRole('button', { name: 'Solid' }).click();
+      await expect(page.getByText('End color')).not.toBeVisible();
+    });
+
+    test('should select radial gradient option', async ({ page }) => {
+      const radialButton = page.getByRole('button', { name: '◉' });
+      await radialButton.click();
+
+      await expect(radialButton).toHaveClass(/bg-gray-900/);
+      await expect(page.getByText('End color')).toBeVisible();
+    });
+  });
+
+  test.describe('Gradient Restore', () => {
+    test.beforeEach(async ({ page }) => {
+      await page.evaluate(() => localStorage.clear());
+      await page.reload();
+    });
+
+    test('should restore solid color configuration', async ({ page }) => {
+      // Set a solid red color
+      await page.getByRole('button', { name: '#DC2626' }).first().click();
+      await page.getByPlaceholder('example.com').fill('solid-color-test.com');
+      await page.waitForTimeout(400);
+
+      // Save by downloading
+      const downloadPromise = page.waitForEvent('download');
+      await page.getByRole('button', { name: 'Download PNG' }).click();
+      await downloadPromise;
+
+      // Change to different color
+      await page.getByRole('button', { name: '#1E40AF' }).first().click();
+
+      // Restore saved config
+      await page.getByRole('button', { name: 'Restore' }).click();
+
+      // Verify color is restored
+      const hexInput = page.locator('input[type="text"]').first();
+      await expect(hexInput).toHaveValue('#DC2626');
+
+      // Verify solid mode is selected
+      const solidButton = page.getByRole('button', { name: 'Solid' });
+      await expect(solidButton).toHaveClass(/bg-gray-900/);
+    });
+
+    test('should restore gradient configuration', async ({ page }) => {
+      // Set a gradient
+      await page.getByRole('button', { name: '↗' }).click();
+      await page.getByRole('button', { name: '#DC2626' }).first().click(); // Start color
+      await page.getByRole('button', { name: '#1E40AF' }).nth(1).click(); // End color
+      await page.getByPlaceholder('example.com').fill('gradient-test.com');
+      await page.waitForTimeout(400);
+
+      // Save by downloading
+      const downloadPromise = page.waitForEvent('download');
+      await page.getByRole('button', { name: 'Download PNG' }).click();
+      await downloadPromise;
+
+      // Change to solid color
+      await page.getByRole('button', { name: 'Solid' }).click();
+      await page.getByRole('button', { name: '#000000' }).first().click();
+
+      // Restore saved config
+      await page.getByRole('button', { name: 'Restore' }).click();
+
+      // Verify gradient mode is restored
+      const gradientButton = page.getByRole('button', { name: '↗' });
+      await expect(gradientButton).toHaveClass(/bg-gray-900/);
+
+      // Verify both colors are restored
+      await expect(page.getByText('Start color')).toBeVisible();
+      await expect(page.getByText('End color')).toBeVisible();
+
+      // Check start color
+      const hexInputs = page.locator('input[type="text"]');
+      await expect(hexInputs.first()).toHaveValue('#DC2626');
     });
   });
 

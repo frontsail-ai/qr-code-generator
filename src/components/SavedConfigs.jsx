@@ -1,6 +1,28 @@
 import { formatQRData } from '../utils/qrDataFormatters';
 import { QR_TYPES } from '../utils/constants';
 
+function getColorStyle(customization) {
+  const { foregroundColor, foregroundColor2, gradientType } = customization;
+
+  if (gradientType === 'none' || !gradientType) {
+    return { backgroundColor: foregroundColor };
+  }
+
+  if (gradientType === 'radial') {
+    return { background: `radial-gradient(circle, ${foregroundColor} 0%, ${foregroundColor2} 100%)` };
+  }
+
+  if (gradientType === 'linear-bl-tr') {
+    return { background: `linear-gradient(45deg, ${foregroundColor} 0%, ${foregroundColor2} 100%)` };
+  }
+
+  if (gradientType === 'linear-tl-br') {
+    return { background: `linear-gradient(135deg, ${foregroundColor} 0%, ${foregroundColor2} 100%)` };
+  }
+
+  return { backgroundColor: foregroundColor };
+}
+
 function ConfigPreview({ config, onRestore, onDelete }) {
   const typeLabel = QR_TYPES.find((t) => t.value === config.qrType)?.label || config.qrType;
   const data = formatQRData(config.qrType, config.formData[config.qrType]);
@@ -14,6 +36,7 @@ function ConfigPreview({ config, onRestore, onDelete }) {
   });
 
   const hasLogo = Boolean(config.customization.logo);
+  const colorStyle = getColorStyle(config.customization);
 
   return (
     <div className="bg-white rounded-lg border border-gray-200 p-3 hover:border-gray-300 transition-colors">
@@ -22,7 +45,7 @@ function ConfigPreview({ config, onRestore, onDelete }) {
           <div className="flex items-center gap-2">
             <span
               className="w-4 h-4 rounded-sm flex-shrink-0"
-              style={{ backgroundColor: config.customization.foregroundColor }}
+              style={colorStyle}
             />
             <span className="text-sm font-medium text-gray-900">{typeLabel}</span>
             {hasLogo && (

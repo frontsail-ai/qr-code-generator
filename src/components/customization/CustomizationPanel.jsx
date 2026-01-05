@@ -1,4 +1,5 @@
 import { ColorPicker } from './ColorPicker';
+import { ForegroundColorPicker } from './ForegroundColorPicker';
 import { DotStyleSelector } from './DotStyleSelector';
 import { CornerStyleSelector } from './CornerStyleSelector';
 import { LogoUploader } from './LogoUploader';
@@ -12,10 +13,13 @@ export function CustomizationPanel({ customization, onChange }) {
     <section className="bg-white rounded-xl p-4 space-y-6">
       <h2 className="text-lg font-semibold text-gray-900">Customize</h2>
 
-      <ColorPicker
-        label="Foreground Color"
-        value={customization.foregroundColor}
-        onChange={(value) => update('foregroundColor', value)}
+      <ForegroundColorPicker
+        color1={customization.foregroundColor}
+        color2={customization.foregroundColor2}
+        gradientType={customization.gradientType}
+        onColor1Change={(value) => update('foregroundColor', value)}
+        onColor2Change={(value) => update('foregroundColor2', value)}
+        onGradientTypeChange={(value) => update('gradientType', value)}
       />
 
       <ColorPicker
