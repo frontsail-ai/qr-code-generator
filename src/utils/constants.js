@@ -1,0 +1,57 @@
+export const DOT_TYPES = [
+  { value: 'square', label: 'Square' },
+  { value: 'rounded', label: 'Rounded' },
+  { value: 'dots', label: 'Dots' },
+  { value: 'classy', label: 'Classy' },
+  { value: 'classy-rounded', label: 'Classy Rounded' },
+  { value: 'extra-rounded', label: 'Extra Rounded' }
+];
+
+export const CORNER_SQUARE_TYPES = [
+  { value: 'square', label: 'Square' },
+  { value: 'dot', label: 'Dot' },
+  { value: 'extra-rounded', label: 'Rounded' }
+];
+
+export const CORNER_DOT_TYPES = [
+  { value: 'square', label: 'Square' },
+  { value: 'dot', label: 'Dot' }
+];
+
+export const QR_TYPES = [
+  { value: 'url', label: 'URL', icon: 'link' },
+  { value: 'email', label: 'Email', icon: 'mail' },
+  { value: 'phone', label: 'Phone', icon: 'phone' },
+  { value: 'text', label: 'Text', icon: 'type' },
+  { value: 'vcard', label: 'vCard', icon: 'user' }
+];
+
+export const PRESET_COLORS = [
+  '#000000', '#FFFFFF', '#1E40AF', '#DC2626',
+  '#16A34A', '#7C3AED', '#EA580C', '#0891B2'
+];
+
+export const DEFAULT_CUSTOMIZATION = {
+  foregroundColor: '#000000',
+  backgroundColor: '#FFFFFF',
+  dotType: 'square',
+  cornerSquareType: 'square',
+  cornerDotType: 'square',
+  logo: null
+};
+
+export const DEFAULT_FORM_DATA = {
+  url: { url: '' },
+  email: { to: '', subject: '', body: '' },
+  phone: { number: '' },
+  text: { content: '' },
+  vcard: {
+    firstName: '',
+    lastName: '',
+    phone: '',
+    email: '',
+    org: '',
+    title: '',
+    website: ''
+  }
+};
