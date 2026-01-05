@@ -7,17 +7,21 @@ A simple, client-side QR code generator with customization options. No backend r
 - **Multiple QR Types:** URL, Email, Phone, Text, vCard
 - **Live Preview:** Real-time QR code updates as you type
 - **Customization:**
-  - Foreground and background colors
+  - Foreground colors with gradient support (solid, linear, radial)
+  - Background colors
   - 6 dot styles (Square, Rounded, Dots, Classy, Classy Rounded, Extra Rounded)
   - Corner square and dot styles
   - Custom logo upload
-- **Export:** Download as PNG or SVG
+- **History:** Saved configurations with restore/delete
+- **Export:** Download as PNG (2x resolution) or SVG
 
 ## Tech Stack
 
-- React 18
+- React 18 + TypeScript
 - Vite
 - Tailwind CSS v4
+- BiomeJS (linting & formatting)
+- Playwright (testing)
 - [qr-code-styling](https://github.com/kozakdenys/qr-code-styling)
 
 ## Getting Started
@@ -26,6 +30,7 @@ A simple, client-side QR code generator with customization options. No backend r
 
 - Node.js 18+
 - Yarn
+- [just](https://github.com/casey/just) (optional, for convenience commands)
 
 ### Installation
 
@@ -59,26 +64,50 @@ yarn preview
 
 ```
 src/
-├── App.jsx                    # Main app component
+├── App.tsx                    # Main app component
+├── types.ts                   # TypeScript type definitions
 ├── hooks/
-│   ├── useQRCode.js          # QR code generation hook
-│   └── useDebounce.js        # Debounce utility hook
+│   ├── useQRCode.ts          # QR code generation hook
+│   ├── useDebounce.ts        # Debounce utility hook
+│   └── useSavedConfigs.ts    # History/saved configs hook
 ├── utils/
-│   ├── constants.js          # Configuration constants
-│   └── qrDataFormatters.js   # QR data formatting utilities
+│   ├── constants.ts          # Configuration constants
+│   └── qrDataFormatters.ts   # QR data formatting utilities
 └── components/
-    ├── Header.jsx
-    ├── QRPreview.jsx
-    ├── TypeSelector.jsx
+    ├── Header.tsx
+    ├── QRPreview.tsx
+    ├── TypeSelector.tsx
+    ├── SavedConfigs.tsx       # History sidebar
     ├── forms/                 # Form components for each QR type
     └── customization/         # Styling customization components
 ```
 
-## Testing
+## Development
+
+This project uses [just](https://github.com/casey/just) as a command runner. See available commands:
+
+```bash
+just --list
+```
+
+### Linting & Formatting
+
+```bash
+just lint        # Lint and auto-fix
+just lint-ci     # Lint without fixing (for CI)
+```
+
+### Type Checking
+
+```bash
+yarn type-check
+```
+
+### Testing
 
 Run all tests:
 ```bash
-yarn test
+just test
 ```
 
 Run tests with UI:
@@ -90,6 +119,14 @@ Run tests in headed mode (visible browser):
 ```bash
 yarn test:headed
 ```
+
+## CI
+
+GitHub Actions runs on every push/PR to `master`/`main`:
+1. Install dependencies
+2. Lint & type-check
+3. Run tests
+4. Build
 
 ## License
 
