@@ -1,5 +1,5 @@
-import { useRef, useEffect, useCallback } from "react";
 import QRCodeStyling from "qr-code-styling";
+import { useCallback, useEffect, useRef } from "react";
 
 function buildGradient(gradientType, color1, color2) {
   if (gradientType === "none") {

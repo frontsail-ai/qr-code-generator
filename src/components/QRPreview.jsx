@@ -1,7 +1,7 @@
-import { useRef, useMemo } from 'react';
-import { useQRCode } from '../hooks/useQRCode';
-import { useDebounce } from '../hooks/useDebounce';
-import { formatQRData } from '../utils/qrDataFormatters';
+import { useMemo, useRef } from "react";
+import { useDebounce } from "../hooks/useDebounce";
+import { useQRCode } from "../hooks/useQRCode";
+import { formatQRData } from "../utils/qrDataFormatters";
 
 export function QRPreview({ qrType, formData, customization, onSave }) {
   const containerRef = useRef(null);
@@ -16,7 +16,7 @@ export function QRPreview({ qrType, formData, customization, onSave }) {
   const { downloadPNG, downloadSVG } = useQRCode(
     containerRef,
     debouncedData,
-    debouncedOptions
+    debouncedOptions,
   );
 
   const handleDownloadPNG = () => {
@@ -39,12 +39,14 @@ export function QRPreview({ qrType, formData, customization, onSave }) {
 
       <div className="flex gap-3">
         <button
+          type="button"
           onClick={handleDownloadPNG}
           className="flex-1 px-4 py-2.5 bg-gray-900 text-white rounded-lg font-medium hover:bg-gray-800 transition-colors cursor-pointer"
         >
           Download PNG
         </button>
         <button
+          type="button"
           onClick={handleDownloadSVG}
           className="flex-1 px-4 py-2.5 bg-white text-gray-900 border border-gray-300 rounded-lg font-medium hover:bg-gray-50 transition-colors cursor-pointer"
         >

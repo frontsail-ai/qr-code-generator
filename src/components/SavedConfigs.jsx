@@ -1,39 +1,49 @@
-import { formatQRData } from '../utils/qrDataFormatters';
-import { QR_TYPES } from '../utils/constants';
+import { QR_TYPES } from "../utils/constants";
+import { formatQRData } from "../utils/qrDataFormatters";
 
 function getColorStyle(customization) {
   const { foregroundColor, foregroundColor2, gradientType } = customization;
 
-  if (gradientType === 'none' || !gradientType) {
+  if (gradientType === "none" || !gradientType) {
     return { backgroundColor: foregroundColor };
   }
 
-  if (gradientType === 'radial') {
-    return { background: `radial-gradient(circle, ${foregroundColor} 0%, ${foregroundColor2} 100%)` };
+  if (gradientType === "radial") {
+    return {
+      background: `radial-gradient(circle, ${foregroundColor} 0%, ${foregroundColor2} 100%)`,
+    };
   }
 
-  if (gradientType === 'linear-bl-tr') {
-    return { background: `linear-gradient(45deg, ${foregroundColor} 0%, ${foregroundColor2} 100%)` };
+  if (gradientType === "linear-bl-tr") {
+    return {
+      background: `linear-gradient(45deg, ${foregroundColor} 0%, ${foregroundColor2} 100%)`,
+    };
   }
 
-  if (gradientType === 'linear-tl-br') {
-    return { background: `linear-gradient(135deg, ${foregroundColor} 0%, ${foregroundColor2} 100%)` };
+  if (gradientType === "linear-tl-br") {
+    return {
+      background: `linear-gradient(135deg, ${foregroundColor} 0%, ${foregroundColor2} 100%)`,
+    };
   }
 
   return { backgroundColor: foregroundColor };
 }
 
 function ConfigPreview({ config, onRestore, onDelete }) {
-  const typeLabel = QR_TYPES.find((t) => t.value === config.qrType)?.label || config.qrType;
+  const typeLabel =
+    QR_TYPES.find((t) => t.value === config.qrType)?.label || config.qrType;
   const data = formatQRData(config.qrType, config.formData[config.qrType]);
-  const displayData = data.length > 30 ? data.substring(0, 30) + '...' : data;
+  const displayData = data.length > 30 ? `${data.substring(0, 30)}...` : data;
 
-  const formattedDate = new Date(config.timestamp).toLocaleDateString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  });
+  const formattedDate = new Date(config.timestamp).toLocaleDateString(
+    undefined,
+    {
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    },
+  );
 
   const hasLogo = Boolean(config.customization.logo);
   const colorStyle = getColorStyle(config.customization);
@@ -47,7 +57,9 @@ function ConfigPreview({ config, onRestore, onDelete }) {
               className="w-4 h-4 rounded-sm flex-shrink-0"
               style={colorStyle}
             />
-            <span className="text-sm font-medium text-gray-900">{typeLabel}</span>
+            <span className="text-sm font-medium text-gray-900">
+              {typeLabel}
+            </span>
             {hasLogo && (
               <span className="flex-shrink-0" title="Has custom logo">
                 <svg
@@ -67,20 +79,24 @@ function ConfigPreview({ config, onRestore, onDelete }) {
             )}
           </div>
           <p className="text-xs text-gray-500 truncate mt-1" title={data}>
-            {displayData || '(empty)'}
+            {displayData || "(empty)"}
           </p>
         </div>
-        <span className="text-xs text-gray-400 flex-shrink-0">{formattedDate}</span>
+        <span className="text-xs text-gray-400 flex-shrink-0">
+          {formattedDate}
+        </span>
       </div>
 
       <div className="flex gap-2">
         <button
+          type="button"
           onClick={() => onRestore(config)}
           className="flex-1 text-xs px-2 py-1.5 bg-gray-900 text-white rounded hover:bg-gray-800 transition-colors cursor-pointer"
         >
           Restore
         </button>
         <button
+          type="button"
           onClick={() => onDelete(config.id)}
           className="text-xs px-2 py-1.5 text-red-600 hover:bg-red-50 rounded transition-colors cursor-pointer"
         >
@@ -108,6 +124,7 @@ export function SavedConfigs({ configs, onRestore, onDelete, onClearAll }) {
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-lg font-semibold text-gray-900">History</h2>
         <button
+          type="button"
           onClick={onClearAll}
           className="text-xs text-gray-500 hover:text-red-600 transition-colors cursor-pointer"
         >

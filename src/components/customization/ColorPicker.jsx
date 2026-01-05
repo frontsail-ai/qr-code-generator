@@ -1,4 +1,4 @@
-import { PRESET_COLORS } from '../../utils/constants';
+import { PRESET_COLORS } from "../../utils/constants";
 
 export function ColorPicker({ label, value, onChange }) {
   return (
@@ -10,10 +10,13 @@ export function ColorPicker({ label, value, onChange }) {
         <div className="flex gap-1.5">
           {PRESET_COLORS.map((color) => (
             <button
+              type="button"
               key={color}
               onClick={() => onChange(color)}
               className={`w-7 h-7 rounded-full border-2 transition-transform hover:scale-110 cursor-pointer ${
-                value === color ? 'border-gray-900 ring-2 ring-gray-300' : 'border-gray-200'
+                value === color
+                  ? "border-gray-900 ring-2 ring-gray-300"
+                  : "border-gray-200"
               }`}
               style={{ backgroundColor: color }}
               title={color}

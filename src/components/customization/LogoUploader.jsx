@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useRef } from "react";
 
 export function LogoUploader({ value, onChange }) {
   const inputRef = useRef(null);
@@ -7,13 +7,13 @@ export function LogoUploader({ value, onChange }) {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (!file.type.startsWith('image/')) {
-      alert('Please upload an image file');
+    if (!file.type.startsWith("image/")) {
+      alert("Please upload an image file");
       return;
     }
 
     if (file.size > 2 * 1024 * 1024) {
-      alert('File size must be under 2MB');
+      alert("File size must be under 2MB");
       return;
     }
 
@@ -27,7 +27,7 @@ export function LogoUploader({ value, onChange }) {
   const handleRemove = () => {
     onChange(null);
     if (inputRef.current) {
-      inputRef.current.value = '';
+      inputRef.current.value = "";
     }
   };
 
@@ -47,6 +47,7 @@ export function LogoUploader({ value, onChange }) {
             />
           </div>
           <button
+            type="button"
             onClick={handleRemove}
             className="px-3 py-1.5 text-sm text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
           >
@@ -54,9 +55,10 @@ export function LogoUploader({ value, onChange }) {
           </button>
         </div>
       ) : (
-        <div
+        <button
+          type="button"
           onClick={() => inputRef.current?.click()}
-          className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors cursor-pointer"
+          className="w-full border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors cursor-pointer bg-transparent"
         >
           <svg
             className="w-8 h-8 mx-auto text-gray-400 mb-2"
@@ -73,7 +75,7 @@ export function LogoUploader({ value, onChange }) {
           </svg>
           <p className="text-sm text-gray-600">Click to upload logo</p>
           <p className="text-xs text-gray-400 mt-1">PNG, JPG up to 2MB</p>
-        </div>
+        </button>
       )}
 
       <input

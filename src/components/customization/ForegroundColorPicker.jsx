@@ -1,4 +1,4 @@
-import { PRESET_COLORS, GRADIENT_TYPES } from '../../utils/constants';
+import { GRADIENT_TYPES, PRESET_COLORS } from "../../utils/constants";
 
 function ColorInput({ value, onChange, label }) {
   return (
@@ -10,10 +10,13 @@ function ColorInput({ value, onChange, label }) {
         <div className="flex gap-1">
           {PRESET_COLORS.slice(0, 4).map((color) => (
             <button
+              type="button"
               key={color}
               onClick={() => onChange(color)}
               className={`w-6 h-6 rounded-full border-2 transition-transform hover:scale-110 cursor-pointer ${
-                value === color ? 'border-gray-900 ring-2 ring-gray-300' : 'border-gray-200'
+                value === color
+                  ? "border-gray-900 ring-2 ring-gray-300"
+                  : "border-gray-200"
               }`}
               style={{ backgroundColor: color }}
               title={color}
@@ -46,13 +49,13 @@ function ColorInput({ value, onChange, label }) {
 function GradientPreview({ color1, color2, gradientType }) {
   let background;
 
-  if (gradientType === 'none') {
+  if (gradientType === "none") {
     background = color1;
-  } else if (gradientType === 'radial') {
+  } else if (gradientType === "radial") {
     background = `radial-gradient(circle, ${color1} 0%, ${color2} 100%)`;
-  } else if (gradientType === 'linear-bl-tr') {
+  } else if (gradientType === "linear-bl-tr") {
     background = `linear-gradient(45deg, ${color1} 0%, ${color2} 100%)`;
-  } else if (gradientType === 'linear-tl-br') {
+  } else if (gradientType === "linear-tl-br") {
     background = `linear-gradient(135deg, ${color1} 0%, ${color2} 100%)`;
   }
 
@@ -71,9 +74,9 @@ export function ForegroundColorPicker({
   gradientType,
   onColor1Change,
   onColor2Change,
-  onGradientTypeChange
+  onGradientTypeChange,
 }) {
-  const isGradient = gradientType !== 'none';
+  const isGradient = gradientType !== "none";
 
   return (
     <div>
@@ -88,12 +91,13 @@ export function ForegroundColorPicker({
           <div className="flex gap-1">
             {GRADIENT_TYPES.map((type) => (
               <button
+                type="button"
                 key={type.value}
                 onClick={() => onGradientTypeChange(type.value)}
                 className={`px-2 py-1 text-sm rounded transition-colors cursor-pointer ${
                   gradientType === type.value
-                    ? 'bg-gray-900 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    ? "bg-gray-900 text-white"
+                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                 }`}
                 title={type.title || type.label}
               >
@@ -101,14 +105,18 @@ export function ForegroundColorPicker({
               </button>
             ))}
           </div>
-          <GradientPreview color1={color1} color2={color2} gradientType={gradientType} />
+          <GradientPreview
+            color1={color1}
+            color2={color2}
+            gradientType={gradientType}
+          />
         </div>
 
         {/* Color 1 */}
         <ColorInput
           value={color1}
           onChange={onColor1Change}
-          label={isGradient ? 'Start color' : undefined}
+          label={isGradient ? "Start color" : undefined}
         />
 
         {/* Color 2 (only shown for gradients) */}

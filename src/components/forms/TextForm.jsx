@@ -8,7 +8,9 @@ export function TextForm({ data, onChange }) {
         <label className="block text-sm font-medium text-gray-700">
           Text Content
         </label>
-        <span className={`text-xs ${charCount > maxLength ? 'text-red-500' : 'text-gray-400'}`}>
+        <span
+          className={`text-xs ${charCount > maxLength ? "text-red-500" : "text-gray-400"}`}
+        >
           {charCount} / {maxLength}
         </span>
       </div>

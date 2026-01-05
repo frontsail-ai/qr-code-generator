@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useCallback, useEffect, useState } from "react";
 
-const STORAGE_KEY = 'qr-saved-configs';
+const STORAGE_KEY = "qr-saved-configs";
 
 function loadFromStorage() {
   try {
@@ -9,7 +9,7 @@ function loadFromStorage() {
       return JSON.parse(stored);
     }
   } catch (e) {
-    console.error('Failed to load saved configs:', e);
+    console.error("Failed to load saved configs:", e);
   }
   return [];
 }
@@ -32,7 +32,7 @@ export function useSavedConfigs() {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(savedConfigs));
     } catch (e) {
-      console.error('Failed to save configs:', e);
+      console.error("Failed to save configs:", e);
     }
   }, [savedConfigs]);
 
@@ -46,16 +46,20 @@ export function useSavedConfigs() {
         const existing = prev[existingIndex];
         const updated = {
           ...existing,
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
         };
-        return [updated, ...prev.slice(0, existingIndex), ...prev.slice(existingIndex + 1)];
+        return [
+          updated,
+          ...prev.slice(0, existingIndex),
+          ...prev.slice(existingIndex + 1),
+        ];
       }
 
       // Create new config
       const newConfig = {
         id: Date.now().toString(),
         timestamp: new Date().toISOString(),
-        ...config
+        ...config,
       };
       return [newConfig, ...prev];
     });
@@ -73,6 +77,6 @@ export function useSavedConfigs() {
     savedConfigs,
     saveConfig,
     deleteConfig,
-    clearAllConfigs
+    clearAllConfigs,
   };
 }
