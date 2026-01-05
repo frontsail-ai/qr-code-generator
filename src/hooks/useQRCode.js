@@ -92,8 +92,16 @@ export function useQRCode(containerRef, data, options) {
   }, [containerRef, data, options]);
 
   const downloadPNG = useCallback(() => {
-    qrCodeRef.current?.download({ name: 'qr-code', extension: 'png' });
-  }, []);
+    // Create a high-res instance for download (qr-code-styling ignores width/height in download())
+    const hiResQR = new QRCodeStyling({
+      width: 560,
+      height: 560,
+      type: 'canvas',
+      data: data || 'https://example.com',
+      ...mapOptionsToQRConfig(options)
+    });
+    hiResQR.download({ name: 'qr-code', extension: 'png' });
+  }, [data, options]);
 
   const downloadSVG = useCallback(() => {
     qrCodeRef.current?.download({ name: 'qr-code', extension: 'svg' });
