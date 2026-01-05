@@ -22,6 +22,7 @@ function App() {
     DEFAULT_CUSTOMIZATION,
   );
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [isDraggingOver, setIsDraggingOver] = useState(false);
 
   const { savedConfigs, saveConfig, deleteConfig, clearAllConfigs } =
     useSavedConfigs();
@@ -91,6 +92,41 @@ function App() {
     setSidebarOpen((prev) => !prev);
   }, []);
 
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    if (e.dataTransfer.types.includes("Files")) {
+      setIsDraggingOver(true);
+    }
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    // Only hide if leaving the main area entirely
+    if (
+      e.currentTarget === e.target ||
+      !e.currentTarget.contains(e.relatedTarget as Node)
+    ) {
+      setIsDraggingOver(false);
+    }
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDraggingOver(false);
+
+    const file = e.dataTransfer.files[0];
+    if (!file?.type.startsWith("image/")) return;
+    if (file.size > 2 * 1024 * 1024) {
+      alert("File size must be under 2MB");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      setCustomization((prev) => ({ ...prev, logo: reader.result as string }));
+    };
+    reader.readAsDataURL(file);
+  }, []);
+
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <Header onToggleSidebar={toggleSidebar} sidebarOpen={sidebarOpen} />
@@ -117,7 +153,36 @@ function App() {
         </aside>
 
         {/* Main content */}
-        <main className="flex-1 p-4 lg:p-6">
+        <main
+          className="flex-1 p-4 lg:p-6 relative"
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+        >
+          {/* Drop zone overlay */}
+          {isDraggingOver && (
+            <div className="absolute inset-0 bg-gray-900/10 border-2 border-dashed border-gray-400 rounded-lg z-10 flex items-center justify-center pointer-events-none">
+              <div className="bg-white px-6 py-4 rounded-lg shadow-lg text-center">
+                <svg
+                  className="w-12 h-12 mx-auto text-gray-400 mb-2"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                  />
+                </svg>
+                <p className="text-gray-700 font-medium">
+                  Drop image to set as logo
+                </p>
+              </div>
+            </div>
+          )}
+
           <div className="max-w-lg mx-auto space-y-6">
             <QRPreview
               qrType={qrType}
