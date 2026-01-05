@@ -1,4 +1,6 @@
-# QR Code Generator [![CI](https://github.com/frontsail-ai/qr-code-generator/actions/workflows/ci.yml/badge.svg)](https://github.com/frontsail-ai/qr-code-generator/actions/workflows/ci.yml)
+# QR Code Generator [![CI](https://github.com/frontsail-ai/qr-code-generator/actions/workflows/ci.yml/badge.svg)](https://github.com/frontsail-ai/qr-code-generator/actions/workflows/ci.yml) [![Netlify Status](https://api.netlify.com/api/v1/badges/86833f43-de6b-4a44-9f47-10db757b1ed4/deploy-status)](https://app.netlify.com/projects/heroic-lily-82a8de/deploys)
+
+Use it online: [QR Code Generator](https://frontsail-qr-gen.netlify.app/) (https://frontsail-qr-gen.netlify.app/
 
 A simple, client-side QR code generator with customization options. No backend required.
 
