@@ -51,7 +51,7 @@ test.describe("QR Code Generator", () => {
 
       // QR code should be rendered (SVG element inside the preview)
       const qrPreview = page.locator("section").first();
-      await expect(qrPreview.locator("svg")).toBeVisible();
+      await expect(qrPreview.locator("svg").first()).toBeVisible();
     });
   });
 
@@ -76,7 +76,7 @@ test.describe("QR Code Generator", () => {
       await page.waitForTimeout(400);
 
       const qrPreview = page.locator("section").first();
-      await expect(qrPreview.locator("svg")).toBeVisible();
+      await expect(qrPreview.locator("svg").first()).toBeVisible();
     });
   });
 
@@ -95,7 +95,7 @@ test.describe("QR Code Generator", () => {
       await page.waitForTimeout(400);
 
       const qrPreview = page.locator("section").first();
-      await expect(qrPreview.locator("svg")).toBeVisible();
+      await expect(qrPreview.locator("svg").first()).toBeVisible();
     });
   });
 
@@ -147,7 +147,7 @@ test.describe("QR Code Generator", () => {
       await page.waitForTimeout(400);
 
       const qrPreview = page.locator("section").first();
-      await expect(qrPreview.locator("svg")).toBeVisible();
+      await expect(qrPreview.locator("svg").first()).toBeVisible();
     });
   });
 
