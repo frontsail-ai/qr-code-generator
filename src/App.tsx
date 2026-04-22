@@ -23,7 +23,9 @@ const sharedDesign = decodeDesignFromUrl();
 
 function App() {
   const [qrType, setQRType] = useState<QRType>(sharedDesign?.qrType ?? "url");
-  const [formData, setFormData] = useState<FormDataMap>(sharedDesign?.formData ?? DEFAULT_FORM_DATA);
+  const [formData, setFormData] = useState<FormDataMap>(
+    sharedDesign?.formData ?? DEFAULT_FORM_DATA,
+  );
   const [customization, setCustomization] = useState<Customization>(
     sharedDesign?.customization ?? DEFAULT_CUSTOMIZATION,
   );
@@ -75,7 +77,11 @@ function App() {
 
   const handleShareConfig = useCallback(
     (config: SavedConfig) => {
-      const url = encodeDesignToUrl(config.qrType, config.formData, config.customization);
+      const url = encodeDesignToUrl(
+        config.qrType,
+        config.formData,
+        config.customization,
+      );
       navigator.clipboard.writeText(url).then(showCopiedFeedback);
     },
     [showCopiedFeedback],
