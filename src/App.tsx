@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { CustomizationPanel } from "./components/customization";
 import {
   EmailForm,
@@ -14,15 +14,29 @@ import { TypeSelector } from "./components/TypeSelector";
 import { useSavedConfigs } from "./hooks/useSavedConfigs";
 import type { Customization, FormDataMap, QRType, SavedConfig } from "./types";
 import { DEFAULT_CUSTOMIZATION, DEFAULT_FORM_DATA } from "./utils/constants";
+import { decodeDesignFromUrl, encodeDesignToUrl } from "./utils/shareUrl";
+
+// Decode shared design from URL hash once at module load (before React mounts).
+// This avoids StrictMode double-mount issues where the hash would be consumed
+// on the first mount and missing on the second.
+const sharedDesign = decodeDesignFromUrl();
 
 function App() {
-  const [qrType, setQRType] = useState<QRType>("url");
-  const [formData, setFormData] = useState<FormDataMap>(DEFAULT_FORM_DATA);
+  const [qrType, setQRType] = useState<QRType>(sharedDesign?.qrType ?? "url");
+  const [formData, setFormData] = useState<FormDataMap>(sharedDesign?.formData ?? DEFAULT_FORM_DATA);
   const [customization, setCustomization] = useState<Customization>(
-    DEFAULT_CUSTOMIZATION,
+    sharedDesign?.customization ?? DEFAULT_CUSTOMIZATION,
   );
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
+  const [showCopiedToast, setShowCopiedToast] = useState(false);
+  const toastTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
+
+  useEffect(() => {
+    if (window.location.hash.startsWith("#s=")) {
+      history.replaceState(null, "", window.location.pathname);
+    }
+  }, []);
 
   const { savedConfigs, saveConfig, deleteConfig, clearAllConfigs } =
     useSavedConfigs();
@@ -47,6 +61,25 @@ function App() {
     setFormData(config.formData);
     setCustomization(config.customization);
   }, []);
+
+  const showCopiedFeedback = useCallback(() => {
+    setShowCopiedToast(true);
+    clearTimeout(toastTimeoutRef.current);
+    toastTimeoutRef.current = setTimeout(() => setShowCopiedToast(false), 2000);
+  }, []);
+
+  const handleShare = useCallback(() => {
+    const url = encodeDesignToUrl(qrType, formData, customization);
+    navigator.clipboard.writeText(url).then(showCopiedFeedback);
+  }, [qrType, formData, customization, showCopiedFeedback]);
+
+  const handleShareConfig = useCallback(
+    (config: SavedConfig) => {
+      const url = encodeDesignToUrl(config.qrType, config.formData, config.customization);
+      navigator.clipboard.writeText(url).then(showCopiedFeedback);
+    },
+    [showCopiedFeedback],
+  );
 
   const renderForm = () => {
     switch (qrType) {
@@ -147,6 +180,7 @@ function App() {
               configs={savedConfigs}
               onRestore={handleRestore}
               onDelete={deleteConfig}
+              onShare={handleShareConfig}
               onClearAll={clearAllConfigs}
             />
           </div>
@@ -189,6 +223,7 @@ function App() {
               formData={formData}
               customization={customization}
               onSave={handleSave}
+              onShare={handleShare}
             />
 
             <TypeSelector value={qrType} onChange={setQRType} />
@@ -206,6 +241,17 @@ function App() {
             />
           </div>
         </main>
+      </div>
+
+      {/* Copied toast */}
+      <div
+        className={`fixed bottom-6 left-1/2 -translate-x-1/2 px-4 py-2 bg-gray-900 text-white text-sm rounded-lg shadow-lg transition-all duration-200 ${
+          showCopiedToast
+            ? "opacity-100 translate-y-0"
+            : "opacity-0 translate-y-2 pointer-events-none"
+        }`}
+      >
+        Link copied to clipboard
       </div>
     </div>
   );
