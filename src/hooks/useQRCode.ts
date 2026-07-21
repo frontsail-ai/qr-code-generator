@@ -1,6 +1,6 @@
 import QRCodeStyling from "qr-code-styling";
 import type { RefObject } from "react";
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { Customization, GradientType } from "../types";
 
 interface ColorStop {
@@ -90,6 +90,7 @@ function mapOptionsToQRConfig(options: Customization) {
 interface UseQRCodeReturn {
   downloadPNG: () => void;
   downloadSVG: () => void;
+  error: string | null;
 }
 
 export function useQRCode(
@@ -98,40 +99,55 @@ export function useQRCode(
   options: Customization,
 ): UseQRCodeReturn {
   const qrCodeRef = useRef<QRCodeStyling | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   // Create/recreate QR code instance when data or options change
   // We recreate instead of update() because qr-code-styling doesn't properly
   // clear gradient settings on update, causing downloads to have wrong colors
   useEffect(() => {
     if (containerRef.current) {
-      qrCodeRef.current = new QRCodeStyling({
-        width: 280,
-        height: 280,
-        type: "svg",
-        data: data || "https://frontsail.ai",
-        ...mapOptionsToQRConfig(options),
-      });
+      try {
+        // The constructor builds the QR matrix and throws a plain string
+        // (not an Error) when the data exceeds QR capacity
+        const qrCode = new QRCodeStyling({
+          width: 280,
+          height: 280,
+          type: "svg",
+          data: data || "https://frontsail.ai",
+          ...mapOptionsToQRConfig(options),
+        });
 
-      containerRef.current.innerHTML = "";
-      qrCodeRef.current.append(containerRef.current);
+        qrCodeRef.current = qrCode;
+        containerRef.current.innerHTML = "";
+        qrCode.append(containerRef.current);
+        setError(null);
+      } catch (err) {
+        qrCodeRef.current = null;
+        containerRef.current.innerHTML = "";
+        setError(String(err));
+      }
     }
   }, [containerRef, data, options]);
 
   const downloadPNG = useCallback(() => {
     // Create a high-res instance for download (qr-code-styling ignores width/height in download())
-    const hiResQR = new QRCodeStyling({
-      width: 560,
-      height: 560,
-      type: "canvas",
-      data: data || "https://frontsail.ai",
-      ...mapOptionsToQRConfig(options),
-    });
-    hiResQR.download({ name: "qr-code", extension: "png" });
+    try {
+      const hiResQR = new QRCodeStyling({
+        width: 560,
+        height: 560,
+        type: "canvas",
+        data: data || "https://frontsail.ai",
+        ...mapOptionsToQRConfig(options),
+      });
+      hiResQR.download({ name: "qr-code", extension: "png" });
+    } catch {
+      // The preview already shows the error; there is nothing to download
+    }
   }, [data, options]);
 
   const downloadSVG = useCallback(() => {
     qrCodeRef.current?.download({ name: "qr-code", extension: "svg" });
   }, []);
 
-  return { downloadPNG, downloadSVG };
+  return { downloadPNG, downloadSVG, error };
 }

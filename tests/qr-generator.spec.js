@@ -106,7 +106,7 @@ test.describe("QR Code Generator", () => {
       await page.getByRole("button", { name: "Text" }).click();
 
       await expect(page.getByPlaceholder("Enter any text...")).toBeVisible();
-      await expect(page.getByText("0 / 1000")).toBeVisible();
+      await expect(page.getByText("0 / 1663")).toBeVisible();
     });
 
     test("should update character counter", async ({ page }) => {
@@ -114,7 +114,56 @@ test.describe("QR Code Generator", () => {
 
       await page.getByPlaceholder("Enter any text...").fill("Hello World");
 
-      await expect(page.getByText("11 / 1000")).toBeVisible();
+      await expect(page.getByText("11 / 1663")).toBeVisible();
+    });
+  });
+
+  test.describe("Capacity Overflow", () => {
+    test("should show an error instead of crashing when content exceeds QR capacity", async ({
+      page,
+    }) => {
+      await page.getByRole("button", { name: "Text" }).click();
+      await page.getByPlaceholder("Enter any text...").fill("x".repeat(3000));
+
+      await expect(
+        page.getByText("This content is too long to fit in a QR code", {
+          exact: false,
+        }),
+      ).toBeVisible();
+
+      // The app must stay alive and interactive
+      await expect(
+        page.getByRole("heading", { name: "QR Code Generator" }),
+      ).toBeVisible();
+      await expect(
+        page.getByRole("button", { name: "Download PNG" }),
+      ).toBeDisabled();
+      await expect(
+        page.getByRole("button", { name: "Download SVG" }),
+      ).toBeDisabled();
+      await expect(page.getByRole("button", { name: "Share" })).toBeDisabled();
+    });
+
+    test("should recover automatically when content shrinks back under capacity", async ({
+      page,
+    }) => {
+      await page.getByRole("button", { name: "Text" }).click();
+      const textarea = page.getByPlaceholder("Enter any text...");
+
+      await textarea.fill("x".repeat(3000));
+      await expect(
+        page.getByText("This content is too long to fit in a QR code", {
+          exact: false,
+        }),
+      ).toBeVisible();
+
+      await textarea.fill("hello");
+
+      await expect(page.locator("section svg").first()).toBeVisible();
+      await expect(
+        page.getByRole("button", { name: "Download PNG" }),
+      ).toBeEnabled();
+      await expect(page.getByRole("button", { name: "Share" })).toBeEnabled();
     });
   });
 

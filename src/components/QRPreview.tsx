@@ -28,11 +28,15 @@ export function QRPreview({
   const debouncedData = useDebounce(qrData, 300);
   const debouncedOptions = useDebounce(customization, 300);
 
-  const { downloadPNG, downloadSVG } = useQRCode(
+  const { downloadPNG, downloadSVG, error } = useQRCode(
     containerRef,
     debouncedData,
     debouncedOptions,
   );
+
+  const errorMessage = error?.includes("code length overflow")
+    ? "This content is too long to fit in a QR code. Shorten it to generate one."
+    : "Couldn't generate a QR code for this content.";
 
   const handleDownloadPNG = () => {
     downloadPNG();
@@ -47,30 +51,39 @@ export function QRPreview({
   return (
     <section className="bg-white rounded-2xl shadow-lg p-6">
       <div
-        ref={containerRef}
         className="flex items-center justify-center mb-6"
         style={{ minHeight: 280 }}
-      />
+      >
+        <div ref={containerRef} className={error ? "hidden" : undefined} />
+        {error && (
+          <p className="text-center text-sm text-gray-500 max-w-xs">
+            {errorMessage}
+          </p>
+        )}
+      </div>
 
       <div className="flex gap-3">
         <button
           type="button"
           onClick={handleDownloadPNG}
-          className="flex-1 px-4 py-2.5 bg-gray-900 text-white rounded-lg font-medium hover:bg-gray-800 transition-colors cursor-pointer"
+          disabled={!!error}
+          className="flex-1 px-4 py-2.5 bg-gray-900 text-white rounded-lg font-medium hover:bg-gray-800 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
         >
           Download PNG
         </button>
         <button
           type="button"
           onClick={handleDownloadSVG}
-          className="flex-1 px-4 py-2.5 bg-white text-gray-900 border border-gray-300 rounded-lg font-medium hover:bg-gray-50 transition-colors cursor-pointer"
+          disabled={!!error}
+          className="flex-1 px-4 py-2.5 bg-white text-gray-900 border border-gray-300 rounded-lg font-medium hover:bg-gray-50 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
         >
           Download SVG
         </button>
         <button
           type="button"
           onClick={onShare}
-          className="px-4 py-2.5 bg-white text-gray-900 border border-gray-300 rounded-lg font-medium hover:bg-gray-50 transition-colors cursor-pointer flex items-center gap-1.5"
+          disabled={!!error}
+          className="px-4 py-2.5 bg-white text-gray-900 border border-gray-300 rounded-lg font-medium hover:bg-gray-50 transition-colors cursor-pointer flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
           title={
             customization.logo
               ? "Logo not included in link"
