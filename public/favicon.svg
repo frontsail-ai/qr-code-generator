@@ -1,9 +1,19 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-  <rect x="3" y="3" width="7" height="7" rx="1"/>
-  <rect x="14" y="3" width="7" height="7" rx="1"/>
-  <rect x="3" y="14" width="7" height="7" rx="1"/>
-  <rect x="14" y="14" width="3" height="3"/>
-  <rect x="18" y="14" width="3" height="3"/>
-  <rect x="14" y="18" width="3" height="3"/>
-  <rect x="18" y="18" width="3" height="3"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+  <!-- Module Q — a letter Q assembled from QR modules; cut-red tail.
+       From the Plico logo concepts (Logo.dc.html, mark 1C). -->
+  <style>
+    .m { fill: #1b1812; }
+    @media (prefers-color-scheme: dark) {
+      .m { fill: #fcfaf4; }
+    }
+  </style>
+  <rect class="m" x="4" y="4" width="9" height="9"/>
+  <rect class="m" x="15" y="4" width="9" height="9"/>
+  <rect class="m" x="26" y="4" width="9" height="9"/>
+  <rect class="m" x="4" y="15" width="9" height="9"/>
+  <rect class="m" x="26" y="15" width="9" height="9"/>
+  <rect class="m" x="4" y="26" width="9" height="9"/>
+  <rect class="m" x="15" y="26" width="9" height="9"/>
+  <rect class="m" x="26" y="26" width="9" height="9"/>
+  <rect x="34" y="34" width="10" height="10" fill="#e0301e"/>
 </svg>
