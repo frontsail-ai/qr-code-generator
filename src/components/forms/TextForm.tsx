@@ -1,7 +1,9 @@
 import type { FormComponentProps, TextFormData } from "../../types";
 
 export function TextForm({ data, onChange }: FormComponentProps<TextFormData>) {
-  const maxLength = 1000;
+  // Byte capacity of a version-40 QR code at error correction level "Q",
+  // the qr-code-styling default; beyond this the QR cannot be generated
+  const maxLength = 1663;
   const charCount = data.content?.length || 0;
 
   return (
@@ -25,7 +27,7 @@ export function TextForm({ data, onChange }: FormComponentProps<TextFormData>) {
       />
       {charCount > maxLength && (
         <p className="text-xs text-red-500 mt-1">
-          Text may be too long for a readable QR code
+          Too long to fit in a QR code
         </p>
       )}
     </div>
