@@ -37,15 +37,32 @@ export const QR_TYPES: QRTypeOption[] = [
   { value: "vcard", label: "vCard", icon: "user" },
 ];
 
+// Plico-tuned palettes: ink instead of pure black, muted technical hues.
 export const PRESET_COLORS: string[] = [
-  "#000000",
+  "#1B1812",
   "#FFFFFF",
-  "#1E40AF",
-  "#DC2626",
-  "#16A34A",
-  "#7C3AED",
-  "#EA580C",
-  "#0891B2",
+  "#7A7263",
+  "#2C4A8A",
+  "#2C7A8A",
+  "#2F7D5B",
+  "#5B4A8A",
+  "#8A3A6B",
+  "#A63D30",
+  "#A9702F",
+];
+
+// Background presets favor warm papers alongside the deep hues
+export const BG_PRESET_COLORS: string[] = [
+  "#1B1812",
+  "#FFFFFF",
+  "#F7F3E9",
+  "#F6EEDD",
+  "#E3ECFB",
+  "#2C4A8A",
+  "#2C7A8A",
+  "#2F7D5B",
+  "#5B4A8A",
+  "#A63D30",
 ];
 
 export const GRADIENT_TYPES: GradientOption[] = [
@@ -56,8 +73,8 @@ export const GRADIENT_TYPES: GradientOption[] = [
 ];
 
 export const DEFAULT_CUSTOMIZATION: Customization = {
-  foregroundColor: "#000000",
-  foregroundColor2: "#7C3AED",
+  foregroundColor: "#1B1812",
+  foregroundColor2: "#2C4A8A",
   gradientType: "none",
   backgroundColor: "#FFFFFF",
   dotType: "square",

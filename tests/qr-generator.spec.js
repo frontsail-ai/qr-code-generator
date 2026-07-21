@@ -176,18 +176,18 @@ test.describe("QR Code Generator", () => {
 
   test.describe("Color Customization", () => {
     test("should display color preset buttons", async ({ page }) => {
-      await expect(page.getByRole("button", { name: "#000000" }).first()).toBeVisible();
-      await expect(page.getByRole("button", { name: "#DC2626" }).first()).toBeVisible();
-      await expect(page.getByRole("button", { name: "#7C3AED" }).first()).toBeVisible();
+      await expect(page.getByRole("button", { name: "#1B1812" }).first()).toBeVisible();
+      await expect(page.getByRole("button", { name: "#A63D30" }).first()).toBeVisible();
+      await expect(page.getByRole("button", { name: "#5B4A8A" }).first()).toBeVisible();
     });
 
     test("should change foreground color when preset clicked", async ({ page }) => {
       // Click red color preset (first set is foreground)
-      await page.getByRole("button", { name: "#DC2626" }).first().click();
+      await page.getByRole("button", { name: "#A63D30" }).first().click();
 
       // Check that the hex input updated
       const hexInput = page.locator('input[type="text"]').first();
-      await expect(hexInput).toHaveValue("DC2626");
+      await expect(hexInput).toHaveValue("A63D30");
     });
 
     test("should have separate foreground and background color sections", async ({ page }) => {
@@ -247,7 +247,7 @@ test.describe("QR Code Generator", () => {
 
     test("should restore solid color configuration", async ({ page }) => {
       // Set a solid red color
-      await page.getByRole("button", { name: "#DC2626" }).first().click();
+      await page.getByRole("button", { name: "#A63D30" }).first().click();
       await page.getByPlaceholder("frontsail.ai").fill("solid-color-test.com");
       await page.waitForTimeout(400);
 
@@ -257,7 +257,7 @@ test.describe("QR Code Generator", () => {
       await downloadPromise;
 
       // Change to different color
-      await page.getByRole("button", { name: "#1E40AF" }).first().click();
+      await page.getByRole("button", { name: "#2C4A8A" }).first().click();
 
       // Restore saved config (actions reveal on hover)
       await page.getByTestId("history-card").first().hover();
@@ -265,7 +265,7 @@ test.describe("QR Code Generator", () => {
 
       // Verify color is restored
       const hexInput = page.locator('input[type="text"]').first();
-      await expect(hexInput).toHaveValue("DC2626");
+      await expect(hexInput).toHaveValue("A63D30");
 
       // Verify solid mode is selected
       const solidButton = page.getByRole("button", { name: "Solid" });
@@ -275,8 +275,8 @@ test.describe("QR Code Generator", () => {
     test("should restore gradient configuration", async ({ page }) => {
       // Set a gradient
       await page.getByRole("button", { name: "Gradient — bottom-left to top-right" }).click();
-      await page.getByRole("button", { name: "#DC2626" }).first().click(); // Start color
-      await page.getByRole("button", { name: "#1E40AF" }).nth(1).click(); // End color
+      await page.getByRole("button", { name: "#7A7263" }).first().click(); // Start color
+      await page.getByRole("button", { name: "#1B1812" }).nth(1).click(); // End color
       await page.getByPlaceholder("frontsail.ai").fill("gradient-test.com");
       await page.waitForTimeout(400);
 
@@ -287,7 +287,7 @@ test.describe("QR Code Generator", () => {
 
       // Change to solid color
       await page.getByRole("button", { name: "Solid" }).click();
-      await page.getByRole("button", { name: "#000000" }).first().click();
+      await page.getByRole("button", { name: "#1B1812" }).first().click();
 
       // Restore saved config (actions reveal on hover)
       await page.getByTestId("history-card").first().hover();
@@ -305,7 +305,7 @@ test.describe("QR Code Generator", () => {
 
       // Check start color
       const hexInputs = page.locator('input[type="text"]');
-      await expect(hexInputs.first()).toHaveValue("DC2626");
+      await expect(hexInputs.first()).toHaveValue("7A7263");
     });
   });
 
@@ -440,7 +440,7 @@ test.describe("QR Code Generator", () => {
     test("should restore saved configuration", async ({ page }) => {
       // Create a config with specific settings
       await page.getByPlaceholder("frontsail.ai").fill("restore-test.com");
-      await page.getByRole("button", { name: "#DC2626" }).first().click(); // Red color
+      await page.getByRole("button", { name: "#A63D30" }).first().click(); // Red color
 
       await page.waitForTimeout(400);
 
@@ -451,7 +451,7 @@ test.describe("QR Code Generator", () => {
 
       // Clear the form
       await page.getByPlaceholder("frontsail.ai").fill("different-url.com");
-      await page.getByRole("button", { name: "#000000" }).first().click(); // Black color
+      await page.getByRole("button", { name: "#1B1812" }).first().click(); // Black color
 
       // Restore the saved config (actions reveal on hover)
       await page.getByTestId("history-card").first().hover();
@@ -532,7 +532,7 @@ test.describe("QR Code Generator", () => {
     }) => {
       // Create a saved config
       await page.getByPlaceholder("frontsail.ai").fill("no-duplicate.com");
-      await page.getByRole("button", { name: "#DC2626" }).first().click();
+      await page.getByRole("button", { name: "#A63D30" }).first().click();
       await page.waitForTimeout(400);
 
       let downloadPromise = page.waitForEvent("download");
@@ -544,7 +544,7 @@ test.describe("QR Code Generator", () => {
 
       // Make some other change to the form
       await page.getByPlaceholder("frontsail.ai").fill("other-url.com");
-      await page.getByRole("button", { name: "#000000" }).first().click();
+      await page.getByRole("button", { name: "#1B1812" }).first().click();
 
       // Restore the saved config (actions reveal on hover)
       await page.getByTestId("history-card").first().hover();

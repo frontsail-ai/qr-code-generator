@@ -1,7 +1,7 @@
 import { ArrowDownRight, ArrowUpRight, CircleDot, type LucideIcon } from "lucide-react";
 import type { GradientType } from "../../types";
 import { PRESET_COLORS } from "../../utils/constants";
-import { HexField, SwatchRow } from "./ColorPicker";
+import { CustomColorRow, HexField, PipetteButton, SwatchRow } from "./ColorPicker";
 
 const GRADIENT_OPTIONS: { value: GradientType; icon: LucideIcon; title: string }[] = [
   { value: "linear-bl-tr", icon: ArrowUpRight, title: "Gradient — bottom-left to top-right" },
@@ -28,6 +28,7 @@ interface ColorRowProps {
   onChange: (value: string) => void;
 }
 
+/* Gradient stop row: short preset slice, read-only hex, pipette for custom */
 function ColorRow({ label, value, onChange }: ColorRowProps) {
   return (
     <div className="flex items-center gap-2">
@@ -36,7 +37,8 @@ function ColorRow({ label, value, onChange }: ColorRowProps) {
       </span>
       <SwatchRow presets={PRESET_COLORS.slice(0, 4)} value={value} onChange={onChange} />
       <span className="flex-1" />
-      <HexField value={value} onChange={onChange} />
+      <HexField value={value} />
+      <PipetteButton onPick={onChange} label={`Pick a custom ${label.toLowerCase()} color`} />
     </div>
   );
 }
@@ -114,11 +116,17 @@ export function ForegroundColorPicker({
           <ColorRow label="End" value={color2} onChange={onColor2Change} />
         </>
       ) : (
-        <div className="flex items-center gap-1.5">
-          <SwatchRow presets={PRESET_COLORS.slice(0, 4)} value={color1} onChange={onColor1Change} />
-          <span className="flex-1" />
-          <HexField value={color1} onChange={onColor1Change} />
-        </div>
+        <>
+          <div className="flex flex-wrap items-start justify-between gap-1.5">
+            <SwatchRow presets={PRESET_COLORS} value={color1} onChange={onColor1Change} grid />
+            <HexField value={color1} />
+          </div>
+          <CustomColorRow
+            value={color1}
+            onChange={onColor1Change}
+            pickerLabel="Pick a custom color"
+          />
+        </>
       )}
     </div>
   );
