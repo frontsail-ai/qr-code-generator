@@ -32,7 +32,9 @@ function App() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
   const [showCopiedToast, setShowCopiedToast] = useState(false);
-  const toastTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
+  const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(
+    undefined,
+  );
 
   useEffect(() => {
     if (window.location.hash.startsWith("#s=")) {
