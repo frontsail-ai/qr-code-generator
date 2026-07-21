@@ -1,43 +1,39 @@
+import { History, PanelLeft } from "lucide-react";
+import { Badge, IconButton } from "./ui";
+
 interface HeaderProps {
   onToggleSidebar: () => void;
   sidebarOpen: boolean;
+  onOpenDrawer: () => void;
+  hasContent: boolean;
 }
 
-export function Header({ onToggleSidebar, sidebarOpen }: HeaderProps) {
+export function Header({ onToggleSidebar, sidebarOpen, onOpenDrawer, hasContent }: HeaderProps) {
   return (
-    <header className="sticky top-0 bg-white border-b border-gray-200 z-10">
-      <div className="flex items-center px-4 py-4">
-        <button
-          type="button"
+    <header className="sticky top-0 z-10 h-14 shrink-0 bg-[var(--surface-card)] border-b border-[var(--border-hairline)] flex items-center gap-3.5 px-4">
+      <span className="hidden lg:inline-flex">
+        <IconButton
+          icon={PanelLeft}
+          title={sidebarOpen ? "Close sidebar" : "Open sidebar"}
           onClick={onToggleSidebar}
-          className="hidden lg:flex items-center justify-center w-8 h-8 mr-3 rounded-md hover:bg-gray-100 transition-colors cursor-pointer"
-          aria-label={sidebarOpen ? "Close sidebar" : "Open sidebar"}
-        >
-          <svg
-            className="w-5 h-5 text-gray-600"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            {sidebarOpen ? (
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M11 19l-7-7 7-7m8 14l-7-7 7-7"
-              />
-            ) : (
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M4 6h16M4 12h16M4 18h16"
-              />
-            )}
-          </svg>
-        </button>
-        <h1 className="text-xl font-bold text-gray-900">QR Code Generator</h1>
-      </div>
+        />
+      </span>
+      <span className="lg:hidden">
+        <IconButton icon={History} title="History" size="lg" onClick={onOpenDrawer} />
+      </span>
+      <h1 className="text-[17px] font-semibold text-[var(--text-primary)]">QR Code Generator</h1>
+      <span className="hidden sm:block w-px h-[22px] bg-[var(--border-hairline)]" aria-hidden />
+      <span className="hidden sm:block plico-label">Runs entirely in your browser</span>
+      <span className="flex-1" />
+      {hasContent ? (
+        <Badge variant="ok" dot>
+          Ready
+        </Badge>
+      ) : (
+        <Badge variant="neutral" dot>
+          Empty
+        </Badge>
+      )}
     </header>
   );
 }

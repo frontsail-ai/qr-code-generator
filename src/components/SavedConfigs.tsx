@@ -1,119 +1,70 @@
-import type { Customization, SavedConfig } from "../types";
-import { QR_TYPES } from "../utils/constants";
+import { QrCode, RotateCcw, Share2, Trash2, X } from "lucide-react";
+import type { SavedConfig } from "../types";
 import { formatQRData } from "../utils/qrDataFormatters";
+import { relativeTime } from "../utils/relativeTime";
+import { QRThumbnail } from "./QRThumbnail";
+import { Badge, IconButton } from "./ui";
 
-function getColorStyle(customization: Customization): React.CSSProperties {
-  const { foregroundColor, foregroundColor2, gradientType } = customization;
-
-  if (gradientType === "none" || !gradientType) {
-    return { backgroundColor: foregroundColor };
+function summarize(config: SavedConfig): string {
+  const { qrType, formData } = config;
+  switch (qrType) {
+    case "url":
+      return formData.url.url || "(empty)";
+    case "email":
+      return formData.email.to || "(empty)";
+    case "phone":
+      return formData.phone.number || "(empty)";
+    case "text":
+      return formData.text.content || "(empty)";
+    case "vcard": {
+      const v = formData.vcard;
+      const name = [v.firstName, v.lastName].filter(Boolean).join(" ");
+      return [name, v.org].filter(Boolean).join(" — ") || "(empty)";
+    }
   }
-
-  if (gradientType === "radial") {
-    return {
-      background: `radial-gradient(circle, ${foregroundColor} 0%, ${foregroundColor2} 100%)`,
-    };
-  }
-
-  if (gradientType === "linear-bl-tr") {
-    return {
-      background: `linear-gradient(45deg, ${foregroundColor} 0%, ${foregroundColor2} 100%)`,
-    };
-  }
-
-  if (gradientType === "linear-tl-br") {
-    return {
-      background: `linear-gradient(135deg, ${foregroundColor} 0%, ${foregroundColor2} 100%)`,
-    };
-  }
-
-  return { backgroundColor: foregroundColor };
 }
 
-interface ConfigPreviewProps {
+interface ConfigCardProps {
   config: SavedConfig;
   onRestore: (config: SavedConfig) => void;
   onDelete: (id: string) => void;
   onShare: (config: SavedConfig) => void;
 }
 
-function ConfigPreview({ config, onRestore, onDelete, onShare }: ConfigPreviewProps) {
-  const typeLabel = QR_TYPES.find((t) => t.value === config.qrType)?.label || config.qrType;
+function ConfigCard({ config, onRestore, onDelete, onShare }: ConfigCardProps) {
   const data = formatQRData(config.qrType, config.formData[config.qrType]);
-  const displayData = data.length > 30 ? `${data.substring(0, 30)}...` : data;
-
-  const formattedDate = new Date(config.timestamp).toLocaleDateString(undefined, {
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-
-  const hasLogo = Boolean(config.customization.logo);
-  const colorStyle = getColorStyle(config.customization);
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-3 hover:border-gray-300 transition-colors">
-      <div className="flex items-start justify-between gap-2 mb-2">
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <span className="w-4 h-4 rounded-sm flex-shrink-0" style={colorStyle} />
-            <span className="text-sm font-medium text-gray-900">{typeLabel}</span>
-            {hasLogo && (
-              <span className="flex-shrink-0" title="Has custom logo">
-                <svg
-                  className="w-4 h-4 text-gray-400"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                  />
-                </svg>
-              </span>
-            )}
-          </div>
-          <p className="text-xs text-gray-500 truncate mt-1" title={data}>
-            {displayData || "(empty)"}
-          </p>
+    <div
+      data-testid="history-card"
+      className="group relative flex gap-2.5 p-2.5 bg-[var(--paper-card)] border border-[var(--ink-200)] rounded-[5px] transition-all duration-[140ms] hover:border-[var(--ink-400)] hover:shadow-[var(--shadow-sm)]"
+    >
+      <QRThumbnail config={config} />
+      <div className="flex-1 min-w-0 flex flex-col gap-[3px]">
+        <div className="flex items-center justify-between gap-2">
+          <span className="font-mono text-[10px] font-semibold tracking-[0.08em] uppercase text-[var(--ink-600)]">
+            {config.qrType === "vcard" ? "vCard" : config.qrType}
+          </span>
+          <span className="font-mono text-[10px] text-[var(--text-muted)]">
+            {relativeTime(config.timestamp)}
+          </span>
         </div>
-        <span className="text-xs text-gray-400 flex-shrink-0">{formattedDate}</span>
+        <span
+          className="font-mono text-xs text-[var(--ink-700)] whitespace-nowrap overflow-hidden text-ellipsis"
+          title={data}
+        >
+          {summarize(config)}
+        </span>
       </div>
-
-      <div className="flex gap-2">
-        <button
-          type="button"
-          onClick={() => onRestore(config)}
-          className="flex-1 text-xs px-2 py-1.5 bg-gray-900 text-white rounded hover:bg-gray-800 transition-colors cursor-pointer"
-        >
-          Restore
-        </button>
-        <button
-          type="button"
-          onClick={() => onShare(config)}
-          className="text-xs px-2 py-1.5 text-gray-600 hover:bg-gray-100 rounded transition-colors cursor-pointer"
+      <div className="absolute top-1.5 right-1.5 flex opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto group-focus-within:opacity-100 group-focus-within:pointer-events-auto transition-opacity duration-[140ms] gap-1 bg-[var(--paper-card)] p-0.5 border border-[var(--border-hairline)] rounded-[3px] shadow-[var(--shadow-sm)]">
+        <IconButton icon={RotateCcw} size="sm" title="Restore" onClick={() => onRestore(config)} />
+        <IconButton
+          icon={Share2}
+          size="sm"
           title="Copy shareable link"
-        >
-          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"
-            />
-          </svg>
-        </button>
-        <button
-          type="button"
-          onClick={() => onDelete(config.id)}
-          className="text-xs px-2 py-1.5 text-red-600 hover:bg-red-50 rounded transition-colors cursor-pointer"
-        >
-          Delete
-        </button>
+          onClick={() => onShare(config)}
+        />
+        <IconButton icon={Trash2} size="sm" title="Delete" onClick={() => onDelete(config.id)} />
       </div>
     </div>
   );
@@ -125,49 +76,66 @@ interface SavedConfigsProps {
   onDelete: (id: string) => void;
   onShare: (config: SavedConfig) => void;
   onClearAll: () => void;
+  onClose?: () => void;
 }
 
+/* History rail content — rendered inside the desktop sidebar and the
+   mobile drawer. The scroll region and footer live here; the shell
+   (aside vs drawer) is the parent's concern. */
 export function SavedConfigs({
   configs,
   onRestore,
   onDelete,
   onShare,
   onClearAll,
+  onClose,
 }: SavedConfigsProps) {
-  if (configs.length === 0) {
-    return (
-      <div>
-        <h2 className="text-lg font-semibold text-gray-900 mb-3">History</h2>
-        <p className="text-sm text-gray-500">
-          No saved configurations yet. Download a QR code to save its settings.
-        </p>
-      </div>
-    );
-  }
-
   return (
-    <div>
-      <div className="flex items-center justify-between mb-3">
-        <h2 className="text-lg font-semibold text-gray-900">History</h2>
-        <button
-          type="button"
-          onClick={onClearAll}
-          className="text-xs text-gray-500 hover:text-red-600 transition-colors cursor-pointer"
-        >
-          Clear all
-        </button>
+    <div className="flex flex-col h-full min-h-0">
+      <div className="flex items-center justify-between px-4 pt-3.5 pb-2.5">
+        <span className="flex items-center gap-2">
+          <span className="plico-label">History</span>
+          {configs.length > 0 && <Badge variant="neutral">{configs.length}</Badge>}
+        </span>
+        <span className="flex items-center gap-1">
+          {configs.length > 0 && (
+            <button
+              type="button"
+              onClick={onClearAll}
+              className="text-xs text-[var(--text-muted)] bg-transparent border-none cursor-pointer px-1.5 py-1 rounded-[2px] transition-colors duration-[140ms] hover:text-[var(--signal-error-500)] hover:bg-[var(--ink-100)]"
+            >
+              Clear all
+            </button>
+          )}
+          {onClose && <IconButton icon={X} title="Close history" onClick={onClose} />}
+        </span>
       </div>
 
-      <div className="space-y-2">
-        {configs.map((config) => (
-          <ConfigPreview
-            key={config.id}
-            config={config}
-            onRestore={onRestore}
-            onDelete={onDelete}
-            onShare={onShare}
-          />
-        ))}
+      {configs.length === 0 ? (
+        <div className="flex-1 flex flex-col items-center gap-2.5 px-6 pt-8 text-center">
+          <QrCode className="w-7 h-7 text-[var(--ink-300)]" aria-hidden />
+          <p className="text-[13px] text-[var(--text-muted)] leading-normal">
+            No saved codes yet. Downloading a code saves its settings here.
+          </p>
+        </div>
+      ) : (
+        <div className="flex-1 overflow-y-auto px-3 flex flex-col gap-2">
+          {configs.map((config) => (
+            <ConfigCard
+              key={config.id}
+              config={config}
+              onRestore={onRestore}
+              onDelete={onDelete}
+              onShare={onShare}
+            />
+          ))}
+        </div>
+      )}
+
+      <div className="px-4 py-2.5 border-t border-[var(--border-hairline)]">
+        <span className="font-mono text-[10px] tracking-[0.08em] uppercase text-[var(--text-muted)]">
+          Saved in this browser only
+        </span>
       </div>
     </div>
   );

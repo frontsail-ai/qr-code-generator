@@ -1,81 +1,43 @@
+import { ArrowDownRight, ArrowUpRight, CircleDot, type LucideIcon } from "lucide-react";
 import type { GradientType } from "../../types";
-import { GRADIENT_TYPES, PRESET_COLORS } from "../../utils/constants";
+import { PRESET_COLORS } from "../../utils/constants";
+import { HexField, SwatchRow } from "./ColorPicker";
 
-interface ColorInputProps {
+const GRADIENT_OPTIONS: { value: GradientType; icon: LucideIcon; title: string }[] = [
+  { value: "linear-bl-tr", icon: ArrowUpRight, title: "Gradient — bottom-left to top-right" },
+  { value: "linear-tl-br", icon: ArrowDownRight, title: "Gradient — top-left to bottom-right" },
+  { value: "radial", icon: CircleDot, title: "Gradient — radial" },
+];
+
+function previewBackground(gradientType: GradientType, color1: string, color2: string): string {
+  switch (gradientType) {
+    case "none":
+      return color1;
+    case "radial":
+      return `radial-gradient(circle, ${color1} 0%, ${color2} 100%)`;
+    case "linear-bl-tr":
+      return `linear-gradient(45deg, ${color1} 0%, ${color2} 100%)`;
+    case "linear-tl-br":
+      return `linear-gradient(135deg, ${color1} 0%, ${color2} 100%)`;
+  }
+}
+
+interface ColorRowProps {
+  label: string;
   value: string;
   onChange: (value: string) => void;
-  label?: string;
 }
 
-function ColorInput({ value, onChange, label }: ColorInputProps) {
+function ColorRow({ label, value, onChange }: ColorRowProps) {
   return (
-    <div>
-      {label && <span className="block text-xs text-gray-500 mb-1">{label}</span>}
-      <div className="flex items-center gap-2">
-        <div className="flex gap-1">
-          {PRESET_COLORS.slice(0, 4).map((color) => (
-            <button
-              type="button"
-              key={color}
-              onClick={() => onChange(color)}
-              className={`w-6 h-6 rounded-full border-2 transition-transform hover:scale-110 cursor-pointer ${
-                value === color ? "border-gray-900 ring-2 ring-gray-300" : "border-gray-200"
-              }`}
-              style={{ backgroundColor: color }}
-              title={color}
-            />
-          ))}
-        </div>
-        <input
-          type="color"
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          className="w-8 h-8 rounded cursor-pointer border border-gray-300"
-        />
-        <input
-          type="text"
-          value={value}
-          onChange={(e) => {
-            const val = e.target.value;
-            if (/^#[0-9A-Fa-f]{0,6}$/.test(val)) {
-              onChange(val);
-            }
-          }}
-          className="w-20 px-2 py-1 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent outline-none font-mono"
-          placeholder="#000000"
-        />
-      </div>
+    <div className="flex items-center gap-2">
+      <span className="font-mono text-[10px] tracking-[0.08em] uppercase text-[var(--text-muted)] w-[38px]">
+        {label}
+      </span>
+      <SwatchRow presets={PRESET_COLORS.slice(0, 4)} value={value} onChange={onChange} />
+      <span className="flex-1" />
+      <HexField value={value} onChange={onChange} />
     </div>
-  );
-}
-
-interface GradientPreviewProps {
-  color1: string;
-  color2: string;
-  gradientType: GradientType;
-}
-
-function GradientPreview({ color1, color2, gradientType }: GradientPreviewProps) {
-  let background: string;
-
-  if (gradientType === "none") {
-    background = color1;
-  } else if (gradientType === "radial") {
-    background = `radial-gradient(circle, ${color1} 0%, ${color2} 100%)`;
-  } else if (gradientType === "linear-bl-tr") {
-    background = `linear-gradient(45deg, ${color1} 0%, ${color2} 100%)`;
-  } else if (gradientType === "linear-tl-br") {
-    background = `linear-gradient(135deg, ${color1} 0%, ${color2} 100%)`;
-  } else {
-    background = color1;
-  }
-
-  return (
-    <div
-      className="w-10 h-10 rounded-lg border border-gray-300 flex-shrink-0"
-      style={{ background }}
-      title="Color preview"
-    />
   );
 }
 
@@ -99,43 +61,65 @@ export function ForegroundColorPicker({
   const isGradient = gradientType !== "none";
 
   return (
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-2">Foreground Color</label>
+    <div className="flex flex-col gap-2">
+      <span className="font-mono text-[11px] font-medium tracking-[0.08em] uppercase text-[var(--text-secondary)]">
+        Foreground
+      </span>
 
-      <div className="space-y-3">
-        {/* Gradient type selector */}
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-gray-500 w-12">Type:</span>
-          <div className="flex gap-1">
-            {GRADIENT_TYPES.map((type) => (
+      <div className="flex items-center gap-2.5">
+        <div className="flex border border-[var(--border-hairline)] rounded-[2px] overflow-hidden w-max">
+          <button
+            type="button"
+            onClick={() => onGradientTypeChange("none")}
+            aria-pressed={!isGradient}
+            className={`px-3 py-1.5 text-xs cursor-pointer border-none transition-colors duration-[140ms] ${
+              isGradient
+                ? "bg-[var(--paper-card)] text-[var(--ink-600)] font-medium hover:bg-[var(--paper-50)]"
+                : "bg-[var(--ink-900)] text-[var(--paper-0)] font-semibold"
+            }`}
+          >
+            Solid
+          </button>
+          {GRADIENT_OPTIONS.map(({ value, icon: Icon, title }) => {
+            const selected = gradientType === value;
+            return (
               <button
                 type="button"
-                key={type.value}
-                onClick={() => onGradientTypeChange(type.value)}
-                className={`px-2 py-1 text-sm rounded transition-colors cursor-pointer ${
-                  gradientType === type.value
-                    ? "bg-gray-900 text-white"
-                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                key={value}
+                onClick={() => onGradientTypeChange(value)}
+                aria-pressed={selected}
+                title={title}
+                aria-label={title}
+                className={`px-2.5 py-1.5 cursor-pointer flex items-center border-none border-l border-l-[var(--border-hairline)] transition-colors duration-[140ms] ${
+                  selected
+                    ? "bg-[var(--ink-900)] text-[var(--paper-0)]"
+                    : "bg-[var(--paper-card)] text-[var(--ink-600)] hover:bg-[var(--paper-50)]"
                 }`}
-                title={type.title || type.label}
               >
-                {type.label}
+                <Icon className="w-3.5 h-3.5" aria-hidden />
               </button>
-            ))}
-          </div>
-          <GradientPreview color1={color1} color2={color2} gradientType={gradientType} />
+            );
+          })}
         </div>
-
-        {/* Color 1 */}
-        <ColorInput
-          value={color1}
-          onChange={onColor1Change}
-          label={isGradient ? "Start color" : undefined}
+        <span
+          title="Color preview"
+          className="w-7 h-7 rounded-[2px] border border-[var(--border-hairline)] shrink-0"
+          style={{ background: previewBackground(gradientType, color1, color2) }}
         />
-
-        {/* Color 2 (only shown for gradients) */}
-        {isGradient && <ColorInput value={color2} onChange={onColor2Change} label="End color" />}
       </div>
+
+      {isGradient ? (
+        <>
+          <ColorRow label="Start" value={color1} onChange={onColor1Change} />
+          <ColorRow label="End" value={color2} onChange={onColor2Change} />
+        </>
+      ) : (
+        <div className="flex items-center gap-1.5">
+          <SwatchRow presets={PRESET_COLORS.slice(0, 4)} value={color1} onChange={onColor1Change} />
+          <span className="flex-1" />
+          <HexField value={color1} onChange={onColor1Change} />
+        </div>
+      )}
     </div>
   );
 }

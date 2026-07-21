@@ -14,8 +14,8 @@ export const DOT_TYPES: StyleOption<DotType>[] = [
   { value: "rounded", label: "Rounded" },
   { value: "dots", label: "Dots" },
   { value: "classy", label: "Classy" },
-  { value: "classy-rounded", label: "Classy Rounded" },
-  { value: "extra-rounded", label: "Extra Rounded" },
+  { value: "classy-rounded", label: "Classy Rnd" },
+  { value: "extra-rounded", label: "Extra Rnd" },
 ];
 
 export const CORNER_SQUARE_TYPES: StyleOption<CornerSquareType>[] = [

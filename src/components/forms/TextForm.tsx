@@ -9,8 +9,12 @@ export function TextForm({ data, onChange }: FormComponentProps<TextFormData>) {
   return (
     <div>
       <div className="flex justify-between items-baseline mb-1.5">
-        <label className="block text-sm font-medium text-gray-700">Text Content</label>
-        <span className={`text-xs ${charCount > maxLength ? "text-red-500" : "text-gray-400"}`}>
+        <label className="block font-mono text-[11px] font-medium tracking-[0.08em] uppercase text-[var(--text-secondary)]">
+          Text Content
+        </label>
+        <span
+          className={`plico-measure text-xs ${charCount > maxLength ? "text-[var(--signal-error-500)]" : "text-[var(--text-muted)]"}`}
+        >
           {charCount} / {maxLength}
         </span>
       </div>
@@ -19,10 +23,10 @@ export function TextForm({ data, onChange }: FormComponentProps<TextFormData>) {
         onChange={(e) => onChange({ ...data, content: e.target.value })}
         placeholder="Enter any text..."
         rows={5}
-        className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent outline-none transition-shadow resize-none"
+        className="w-full px-3 py-2.5 bg-[var(--paper-card)] border border-[var(--border-hairline)] rounded-[2px] text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none transition-colors duration-[140ms] focus:border-[var(--border-focus)] focus:shadow-[0_0_0_1px_var(--border-focus)] resize-none"
       />
       {charCount > maxLength && (
-        <p className="text-xs text-red-500 mt-1">Too long to fit in a QR code</p>
+        <p className="text-xs text-[var(--signal-error-500)] mt-1">Too long to fit in a QR code</p>
       )}
     </div>
   );
