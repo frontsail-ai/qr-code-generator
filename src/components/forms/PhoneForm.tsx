@@ -1,14 +1,9 @@
 import type { FormComponentProps, PhoneFormData } from "../../types";
 
-export function PhoneForm({
-  data,
-  onChange,
-}: FormComponentProps<PhoneFormData>) {
+export function PhoneForm({ data, onChange }: FormComponentProps<PhoneFormData>) {
   return (
     <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1.5">
-        Phone Number
-      </label>
+      <label className="block text-sm font-medium text-gray-700 mb-1.5">Phone Number</label>
       <input
         type="tel"
         value={data.number}

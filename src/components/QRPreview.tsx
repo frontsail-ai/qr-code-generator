@@ -12,13 +12,7 @@ interface QRPreviewProps {
   onShare?: () => void;
 }
 
-export function QRPreview({
-  qrType,
-  formData,
-  customization,
-  onSave,
-  onShare,
-}: QRPreviewProps) {
+export function QRPreview({ qrType, formData, customization, onSave, onShare }: QRPreviewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   const qrData = useMemo(() => {
@@ -50,16 +44,9 @@ export function QRPreview({
 
   return (
     <section className="bg-white rounded-2xl shadow-lg p-6">
-      <div
-        className="flex items-center justify-center mb-6"
-        style={{ minHeight: 280 }}
-      >
+      <div className="flex items-center justify-center mb-6" style={{ minHeight: 280 }}>
         <div ref={containerRef} className={error ? "hidden" : undefined} />
-        {error && (
-          <p className="text-center text-sm text-gray-500 max-w-xs">
-            {errorMessage}
-          </p>
-        )}
+        {error && <p className="text-center text-sm text-gray-500 max-w-xs">{errorMessage}</p>}
       </div>
 
       <div className="flex gap-3">
@@ -84,18 +71,9 @@ export function QRPreview({
           onClick={onShare}
           disabled={!!error}
           className="px-4 py-2.5 bg-white text-gray-900 border border-gray-300 rounded-lg font-medium hover:bg-gray-50 transition-colors cursor-pointer flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
-          title={
-            customization.logo
-              ? "Logo not included in link"
-              : "Copy shareable link"
-          }
+          title={customization.logo ? "Logo not included in link" : "Copy shareable link"}
         >
-          <svg
-            className="w-4 h-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
               strokeLinecap="round"
               strokeLinejoin="round"

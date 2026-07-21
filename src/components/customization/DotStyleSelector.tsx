@@ -9,9 +9,7 @@ interface DotStyleSelectorProps {
 export function DotStyleSelector({ value, onChange }: DotStyleSelectorProps) {
   return (
     <div>
-      <label className="block text-sm font-medium text-gray-700 mb-2">
-        Dot Style
-      </label>
+      <label className="block text-sm font-medium text-gray-700 mb-2">Dot Style</label>
       <div className="grid grid-cols-3 gap-2">
         {DOT_TYPES.map((type) => (
           <button

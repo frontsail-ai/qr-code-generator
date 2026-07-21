@@ -17,9 +17,7 @@ export function CornerStyleSelector({
   return (
     <div className="space-y-4">
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Corner Square Style
-        </label>
+        <label className="block text-sm font-medium text-gray-700 mb-2">Corner Square Style</label>
         <div className="flex gap-2">
           {CORNER_SQUARE_TYPES.map((type) => (
             <button
@@ -39,9 +37,7 @@ export function CornerStyleSelector({
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Corner Dot Style
-        </label>
+        <label className="block text-sm font-medium text-gray-700 mb-2">Corner Dot Style</label>
         <div className="flex gap-2">
           {CORNER_DOT_TYPES.map((type) => (
             <button

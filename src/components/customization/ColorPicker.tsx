@@ -9,9 +9,7 @@ interface ColorPickerProps {
 export function ColorPicker({ label, value, onChange }: ColorPickerProps) {
   return (
     <div>
-      <label className="block text-sm font-medium text-gray-700 mb-2">
-        {label}
-      </label>
+      <label className="block text-sm font-medium text-gray-700 mb-2">{label}</label>
       <div className="flex items-center gap-3">
         <div className="flex gap-1.5">
           {PRESET_COLORS.map((color) => (
@@ -20,9 +18,7 @@ export function ColorPicker({ label, value, onChange }: ColorPickerProps) {
               key={color}
               onClick={() => onChange(color)}
               className={`w-7 h-7 rounded-full border-2 transition-transform hover:scale-110 cursor-pointer ${
-                value === color
-                  ? "border-gray-900 ring-2 ring-gray-300"
-                  : "border-gray-200"
+                value === color ? "border-gray-900 ring-2 ring-gray-300" : "border-gray-200"
               }`}
               style={{ backgroundColor: color }}
               title={color}
