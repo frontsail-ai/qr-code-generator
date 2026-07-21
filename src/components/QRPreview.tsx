@@ -88,7 +88,13 @@ export function QRPreview({ qrType, formData, customization, onSave, onShare }: 
   );
 
   return (
-    <section className="flex flex-col items-center gap-[18px] w-full">
+    <section
+      className={`flex flex-col items-center gap-[18px] w-full ${
+        isDesktop
+          ? ""
+          : "plico-grid -mx-4 w-auto self-stretch px-4 -mt-6 pt-5 pb-5 border-b border-[var(--border-hairline)]"
+      }`}
+    >
       {/* Dimension annotation — drafting-style */}
       {!isEmpty && !error && (
         <div className="hidden lg:flex w-[344px] items-center gap-2.5" aria-hidden>

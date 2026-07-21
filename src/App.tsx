@@ -186,8 +186,11 @@ function App() {
         )}
 
         {/* Center canvas */}
+        {/* The engineering grid covers the whole canvas on desktop; on mobile
+            it stays behind the preview only (QRPreview draws it) so the
+            controls below read against plain paper */}
         <main
-          className="plico-grid flex-1 relative flex flex-col items-center lg:justify-center gap-[18px] min-w-0 px-4 py-6 lg:py-0 pb-24 lg:pb-0"
+          className={`${isDesktop ? "plico-grid" : "bg-[var(--surface-page)]"} flex-1 relative flex flex-col items-center lg:justify-center gap-[18px] min-w-0 px-4 py-6 lg:py-0 pb-24 lg:pb-0`}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
