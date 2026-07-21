@@ -5,6 +5,7 @@ import type {
   DotType,
   GradientType,
 } from "../../types";
+import { SectionLabel } from "../ui";
 import { ColorPicker } from "./ColorPicker";
 import { CornerStyleSelector } from "./CornerStyleSelector";
 import { DotStyleSelector } from "./DotStyleSelector";
@@ -22,8 +23,8 @@ export function CustomizationPanel({ customization, onChange }: CustomizationPan
   };
 
   return (
-    <section className="bg-white rounded-xl p-4 space-y-6">
-      <h2 className="text-lg font-semibold text-gray-900">Customize</h2>
+    <section className="flex flex-col gap-3.5">
+      <SectionLabel>03 — Style</SectionLabel>
 
       <ForegroundColorPicker
         color1={customization.foregroundColor}
@@ -35,7 +36,7 @@ export function CustomizationPanel({ customization, onChange }: CustomizationPan
       />
 
       <ColorPicker
-        label="Background Color"
+        label="Background"
         value={customization.backgroundColor}
         onChange={(value: string) => update("backgroundColor", value)}
       />

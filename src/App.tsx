@@ -1,19 +1,25 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Check, ImagePlus, Link as LinkIcon } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CustomizationPanel } from "./components/customization";
 import { EmailForm, PhoneForm, TextForm, URLForm, VCardForm } from "./components/forms";
 import { Header } from "./components/Header";
 import { QRPreview } from "./components/QRPreview";
 import { SavedConfigs } from "./components/SavedConfigs";
 import { TypeSelector } from "./components/TypeSelector";
+import { SectionLabel } from "./components/ui";
+import { useIsDesktop } from "./hooks/useMediaQuery";
 import { useSavedConfigs } from "./hooks/useSavedConfigs";
 import type { Customization, FormDataMap, QRType, SavedConfig } from "./types";
 import { DEFAULT_CUSTOMIZATION, DEFAULT_FORM_DATA } from "./utils/constants";
+import { formatQRData } from "./utils/qrDataFormatters";
 import { decodeDesignFromUrl, encodeDesignToUrl } from "./utils/shareUrl";
 
 // Decode shared design from URL hash once at module load (before React mounts).
 // This avoids StrictMode double-mount issues where the hash would be consumed
 // on the first mount and missing on the second.
 const sharedDesign = decodeDesignFromUrl();
+
+type ToastKind = "copy" | "save";
 
 function App() {
   const [qrType, setQRType] = useState<QRType>(sharedDesign?.qrType ?? "url");
@@ -24,8 +30,10 @@ function App() {
     sharedDesign?.customization ?? DEFAULT_CUSTOMIZATION,
   );
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
-  const [showCopiedToast, setShowCopiedToast] = useState(false);
+  const [toast, setToast] = useState<{ kind: ToastKind; text: string } | null>(null);
+  const [toastVisible, setToastVisible] = useState(false);
   const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   useEffect(() => {
@@ -35,6 +43,12 @@ function App() {
   }, []);
 
   const { savedConfigs, saveConfig, deleteConfig, clearAllConfigs } = useSavedConfigs();
+  const isDesktop = useIsDesktop();
+
+  const hasContent = useMemo(
+    () => formatQRData(qrType, formData[qrType]) !== "",
+    [qrType, formData],
+  );
 
   const updateFormData = <K extends QRType>(type: K, data: FormDataMap[K]) => {
     setFormData((prev) => ({
@@ -43,37 +57,44 @@ function App() {
     }));
   };
 
+  const showToast = useCallback((kind: ToastKind, text: string) => {
+    setToast({ kind, text });
+    setToastVisible(true);
+    clearTimeout(toastTimeoutRef.current);
+    toastTimeoutRef.current = setTimeout(() => setToastVisible(false), 2000);
+  }, []);
+
   const handleSave = useCallback(() => {
     saveConfig({
       qrType,
       formData,
       customization,
     });
-  }, [qrType, formData, customization, saveConfig]);
+    showToast("save", "Saved to history");
+  }, [qrType, formData, customization, saveConfig, showToast]);
 
   const handleRestore = useCallback((config: SavedConfig) => {
     setQRType(config.qrType);
     setFormData(config.formData);
     setCustomization(config.customization);
-  }, []);
-
-  const showCopiedFeedback = useCallback(() => {
-    setShowCopiedToast(true);
-    clearTimeout(toastTimeoutRef.current);
-    toastTimeoutRef.current = setTimeout(() => setShowCopiedToast(false), 2000);
+    setDrawerOpen(false);
   }, []);
 
   const handleShare = useCallback(() => {
     const url = encodeDesignToUrl(qrType, formData, customization);
-    void navigator.clipboard.writeText(url).then(showCopiedFeedback);
-  }, [qrType, formData, customization, showCopiedFeedback]);
+    void navigator.clipboard
+      .writeText(url)
+      .then(() => showToast("copy", "Link copied to clipboard"));
+  }, [qrType, formData, customization, showToast]);
 
   const handleShareConfig = useCallback(
     (config: SavedConfig) => {
       const url = encodeDesignToUrl(config.qrType, config.formData, config.customization);
-      void navigator.clipboard.writeText(url).then(showCopiedFeedback);
+      void navigator.clipboard
+        .writeText(url)
+        .then(() => showToast("copy", "Link copied to clipboard"));
     },
-    [showCopiedFeedback],
+    [showToast],
   );
 
   const renderForm = () => {
@@ -133,91 +154,132 @@ function App() {
     reader.readAsDataURL(file);
   }, []);
 
-  return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-      <Header onToggleSidebar={toggleSidebar} sidebarOpen={sidebarOpen} />
+  const historyPane = (
+    <SavedConfigs
+      configs={savedConfigs}
+      onRestore={handleRestore}
+      onDelete={deleteConfig}
+      onShare={handleShareConfig}
+      onClearAll={clearAllConfigs}
+    />
+  );
 
-      <div className="flex-1 flex flex-col lg:flex-row">
-        {/* Left pane - History */}
-        <aside
-          className={`lg:flex-shrink-0 bg-white border-b lg:border-b-0 lg:border-r border-gray-200 transition-all duration-300 ${
-            sidebarOpen ? "lg:w-80" : "lg:w-0 lg:overflow-hidden"
-          }`}
-        >
-          <div
-            className={`p-4 lg:sticky lg:top-16 lg:h-[calc(100vh-4rem)] lg:overflow-y-auto transition-opacity duration-300 ${
-              sidebarOpen ? "opacity-100" : "lg:opacity-0"
+  return (
+    <div className="min-h-screen bg-[var(--surface-page)] flex flex-col">
+      <Header
+        onToggleSidebar={toggleSidebar}
+        sidebarOpen={sidebarOpen}
+        onOpenDrawer={() => setDrawerOpen(true)}
+        hasContent={hasContent}
+      />
+
+      <div className="flex-1 flex min-h-0">
+        {/* History rail — desktop */}
+        {isDesktop && (
+          <aside
+            className={`flex flex-col shrink-0 bg-[var(--surface-card)] border-r border-[var(--border-hairline)] overflow-hidden transition-all duration-[220ms] ${
+              sidebarOpen ? "w-[264px]" : "w-0 border-r-0"
             }`}
           >
+            <div className="w-[264px] h-[calc(100vh-3.5rem)] sticky top-14">{historyPane}</div>
+          </aside>
+        )}
+
+        {/* Center canvas */}
+        <main
+          className="plico-grid flex-1 relative flex flex-col items-center lg:justify-center gap-[18px] min-w-0 px-4 py-6 lg:py-0 pb-24 lg:pb-0"
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+        >
+          <QRPreview
+            qrType={qrType}
+            formData={formData}
+            customization={customization}
+            onSave={handleSave}
+            onShare={handleShare}
+          />
+
+          {/* Mobile-only: type + content + style, stacked under the preview */}
+          {!isDesktop && (
+            <div className="w-full max-w-lg flex flex-col gap-5">
+              <TypeSelector value={qrType} onChange={setQRType} />
+              <div className="flex flex-col gap-2.5">
+                <SectionLabel>02 — Content</SectionLabel>
+                {renderForm()}
+              </div>
+              <CustomizationPanel customization={customization} onChange={setCustomization} />
+            </div>
+          )}
+
+          {/* Drop zone overlay */}
+          {isDraggingOver && (
+            <div className="absolute inset-3 border-2 border-dashed border-[var(--crease-500)] rounded-[2px] bg-[color-mix(in_srgb,var(--crease-500)_7%,transparent)] z-10 flex items-center justify-center pointer-events-none">
+              <div className="bg-[var(--paper-card)] border border-[var(--border-hairline)] rounded-[5px] shadow-[var(--shadow-lg)] px-7 py-5 flex flex-col items-center gap-2">
+                <ImagePlus className="w-6 h-6 text-[var(--crease-500)]" aria-hidden />
+                <div className="text-sm font-semibold text-[var(--text-primary)]">
+                  Drop image to set as logo
+                </div>
+                <span className="font-mono text-[10px] tracking-[0.04em] uppercase text-[var(--text-muted)]">
+                  PNG or JPG · under 2 MB
+                </span>
+              </div>
+            </div>
+          )}
+        </main>
+
+        {/* Inspector — desktop */}
+        {isDesktop && (
+          <aside className="w-[320px] shrink-0 bg-[var(--surface-card)] border-l border-[var(--border-hairline)]">
+            <div className="sticky top-14 h-[calc(100vh-3.5rem)] overflow-y-auto p-5 flex flex-col gap-6">
+              <div className="flex flex-col gap-2.5">
+                <SectionLabel>01 — Type</SectionLabel>
+                <TypeSelector value={qrType} onChange={setQRType} />
+              </div>
+              <div className="flex flex-col gap-2.5">
+                <SectionLabel>02 — Content</SectionLabel>
+                {renderForm()}
+              </div>
+              <CustomizationPanel customization={customization} onChange={setCustomization} />
+            </div>
+          </aside>
+        )}
+      </div>
+
+      {/* History drawer — mobile */}
+      {!isDesktop && drawerOpen && (
+        <div className="fixed inset-0 z-20">
+          <button
+            type="button"
+            aria-label="Dismiss history"
+            className="absolute inset-0 bg-[rgba(27,24,18,0.45)] border-none cursor-pointer"
+            onClick={() => setDrawerOpen(false)}
+          />
+          <div className="absolute top-0 bottom-0 left-0 w-[320px] max-w-[85vw] bg-[var(--surface-card)] shadow-[var(--shadow-lg)] flex flex-col">
             <SavedConfigs
               configs={savedConfigs}
               onRestore={handleRestore}
               onDelete={deleteConfig}
               onShare={handleShareConfig}
               onClearAll={clearAllConfigs}
+              onClose={() => setDrawerOpen(false)}
             />
           </div>
-        </aside>
+        </div>
+      )}
 
-        {/* Main content */}
-        <main
-          className="flex-1 p-4 lg:p-6 relative"
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onDrop={handleDrop}
-        >
-          {/* Drop zone overlay */}
-          {isDraggingOver && (
-            <div className="absolute inset-0 bg-gray-900/10 border-2 border-dashed border-gray-400 rounded-lg z-10 flex items-center justify-center pointer-events-none">
-              <div className="bg-white px-6 py-4 rounded-lg shadow-lg text-center">
-                <svg
-                  className="w-12 h-12 mx-auto text-gray-400 mb-2"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                  />
-                </svg>
-                <p className="text-gray-700 font-medium">Drop image to set as logo</p>
-              </div>
-            </div>
-          )}
-
-          <div className="max-w-lg mx-auto space-y-6">
-            <QRPreview
-              qrType={qrType}
-              formData={formData}
-              customization={customization}
-              onSave={handleSave}
-              onShare={handleShare}
-            />
-
-            <TypeSelector value={qrType} onChange={setQRType} />
-
-            <section className="bg-white rounded-xl p-4">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Content</h2>
-              {renderForm()}
-            </section>
-
-            <CustomizationPanel customization={customization} onChange={setCustomization} />
-          </div>
-        </main>
-      </div>
-
-      {/* Copied toast */}
+      {/* Toast */}
       <div
-        className={`fixed bottom-6 left-1/2 -translate-x-1/2 px-4 py-2 bg-gray-900 text-white text-sm rounded-lg shadow-lg transition-all duration-200 ${
-          showCopiedToast
-            ? "opacity-100 translate-y-0"
-            : "opacity-0 translate-y-2 pointer-events-none"
+        className={`fixed bottom-24 lg:bottom-6 left-1/2 -translate-x-1/2 z-30 px-4 py-2.5 bg-[var(--ink-900)] text-[var(--paper-0)] text-[13px] font-medium rounded-[2px] shadow-[var(--shadow-lg)] flex items-center gap-2.5 transition-all duration-[220ms] ${
+          toastVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2 pointer-events-none"
         }`}
       >
-        Link copied to clipboard
+        {toast?.kind === "copy" ? (
+          <LinkIcon className="w-[15px] h-[15px]" aria-hidden />
+        ) : (
+          <Check className="w-[15px] h-[15px]" aria-hidden />
+        )}
+        {toast?.text}
       </div>
     </div>
   );

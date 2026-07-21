@@ -1,0 +1,140 @@
+/* ============================================================
+   PLICO DESIGN SYSTEM — tokens consumed by the QR generator UI.
+   Imported from the Plico design-system project (claude.ai/design
+   "QR Code Generator UI Redesign"); keep values in sync with it.
+   ============================================================ */
+
+@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap");
+
+:root {
+  /* ---- Line conventions ---- */
+  --cut-500: #e0301e;
+  --cut-600: #c2271a;
+  --crease-500: #2d6cdf;
+  --crease-600: #1f52b5;
+
+  /* ---- Kraft ---- */
+  --kraft-100: #efe2c9;
+  --kraft-400: #c49e60;
+  --kraft-700: #6f522a;
+
+  /* ---- Ink — warm graphite neutrals ---- */
+  --ink-900: #1b1812;
+  --ink-800: #2a261d;
+  --ink-700: #3d382c;
+  --ink-600: #5a5345;
+  --ink-500: #7a7263;
+  --ink-400: #9a9180;
+  --ink-300: #c2baa8;
+  --ink-200: #dcd5c5;
+  --ink-100: #e9e3d6;
+
+  /* ---- Paper ---- */
+  --paper-0: #fcfaf4;
+  --paper-50: #f7f3e9;
+  --paper-card: #ffffff;
+
+  /* ---- Status ---- */
+  --signal-ok-500: #2f7d5b;
+  --signal-ok-50: #e4f0e9;
+  --signal-warn-500: #c8851b;
+  --signal-warn-50: #f8eed7;
+  --signal-error-500: #c2271a;
+  --signal-error-50: #f8e2de;
+  --signal-info-500: #2d6cdf;
+  --signal-info-50: #e3ecfb;
+
+  /* ---- Semantic aliases ---- */
+  --text-primary: var(--ink-900);
+  --text-secondary: var(--ink-600);
+  --text-muted: var(--ink-400);
+  --surface-page: var(--paper-0);
+  --surface-card: var(--paper-card);
+  --surface-sunken: var(--paper-50);
+  --border-hairline: var(--ink-300);
+  --border-default: var(--ink-200);
+  --border-strong: var(--ink-900);
+  --border-focus: var(--crease-500);
+  --grid-line: rgba(27, 24, 18, 0.06);
+  --grid-line-major: rgba(27, 24, 18, 0.1);
+  --dimension-line: var(--ink-500);
+
+  /* ---- Type ---- */
+  --font-sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --tracking-label: 0.08em;
+
+  /* ---- Elevation ---- */
+  --shadow-sm: 0 1px 2px rgba(27, 24, 18, 0.06), 0 1px 1px rgba(27, 24, 18, 0.04);
+  --shadow-md: 0 2px 6px rgba(27, 24, 18, 0.08), 0 1px 2px rgba(27, 24, 18, 0.06);
+  --shadow-lg: 0 8px 24px rgba(27, 24, 18, 0.12), 0 2px 6px rgba(27, 24, 18, 0.08);
+
+  /* ---- Motion ---- */
+  --ease-standard: cubic-bezier(0.2, 0, 0.1, 1);
+  --dur-fast: 140ms;
+  --dur-normal: 220ms;
+
+  /* ---- Layout ---- */
+  --sidebar-w: 264px;
+  --inspector-w: 320px;
+  --topbar-h: 56px;
+}
+
+body {
+  font-family: var(--font-sans);
+  color: var(--text-primary);
+  background: var(--surface-page);
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--crease-500) 22%, transparent);
+}
+
+:focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 2px;
+}
+
+/* ---- The technical label: mono, uppercase, tracked-out ---- */
+.plico-label {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+/* ---- Engineering grid background — the drafting surface ---- */
+.plico-grid {
+  background-color: var(--surface-page);
+  background-image:
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px),
+    linear-gradient(var(--grid-line-major) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line-major) 1px, transparent 1px);
+  background-size:
+    8px 8px,
+    8px 8px,
+    40px 40px,
+    40px 40px;
+}
+
+/* ---- Mono numerals: tabular + slashed zero ---- */
+.plico-measure {
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-feature-settings:
+    "tnum" 1,
+    "zero" 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}

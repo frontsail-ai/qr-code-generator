@@ -106,6 +106,14 @@ export function useQRCode(
   // clear gradient settings on update, causing downloads to have wrong colors
   useEffect(() => {
     if (containerRef.current) {
+      // Empty content renders nothing — the UI shows an empty state instead
+      // of a placeholder QR, and export stays locked
+      if (!data) {
+        qrCodeRef.current = null;
+        containerRef.current.innerHTML = "";
+        setError(null);
+        return;
+      }
       try {
         // The constructor builds the QR matrix and throws a plain string
         // (not an Error) when the data exceeds QR capacity
@@ -113,7 +121,7 @@ export function useQRCode(
           width: 280,
           height: 280,
           type: "svg",
-          data: data || "https://frontsail.ai",
+          data,
           ...mapOptionsToQRConfig(options),
         });
 
@@ -130,13 +138,14 @@ export function useQRCode(
   }, [containerRef, data, options]);
 
   const downloadPNG = useCallback(() => {
+    if (!data) return;
     // Create a high-res instance for download (qr-code-styling ignores width/height in download())
     try {
       const hiResQR = new QRCodeStyling({
         width: 560,
         height: 560,
         type: "canvas",
-        data: data || "https://frontsail.ai",
+        data,
         ...mapOptionsToQRConfig(options),
       });
       void hiResQR.download({ name: "qr-code", extension: "png" });
