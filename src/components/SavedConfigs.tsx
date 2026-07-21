@@ -1,9 +1,10 @@
 import { QrCode, RotateCcw, Share2, Trash2, X } from "lucide-react";
+import { useIsDesktop } from "../hooks/useMediaQuery";
 import type { SavedConfig } from "../types";
 import { formatQRData } from "../utils/qrDataFormatters";
 import { relativeTime } from "../utils/relativeTime";
 import { QRThumbnail } from "./QRThumbnail";
-import { Badge, IconButton } from "./ui";
+import { Badge, Button, IconButton } from "./ui";
 
 function summarize(config: SavedConfig): string {
   const { qrType, formData } = config;
@@ -33,12 +34,10 @@ interface ConfigCardProps {
 
 function ConfigCard({ config, onRestore, onDelete, onShare }: ConfigCardProps) {
   const data = formatQRData(config.qrType, config.formData[config.qrType]);
+  const isDesktop = useIsDesktop();
 
-  return (
-    <div
-      data-testid="history-card"
-      className="group relative flex gap-2.5 p-2.5 bg-[var(--paper-card)] border border-[var(--ink-200)] rounded-[5px] transition-all duration-[140ms] hover:border-[var(--ink-400)] hover:shadow-[var(--shadow-sm)]"
-    >
+  const meta = (
+    <div className="flex gap-2.5">
       <QRThumbnail config={config} />
       <div className="flex-1 min-w-0 flex flex-col gap-[3px]">
         <div className="flex items-center justify-between gap-2">
@@ -56,6 +55,45 @@ function ConfigCard({ config, onRestore, onDelete, onShare }: ConfigCardProps) {
           {summarize(config)}
         </span>
       </div>
+    </div>
+  );
+
+  if (!isDesktop) {
+    /* Touch has no hover — actions live in an always-visible footer row */
+    return (
+      <div
+        data-testid="history-card"
+        className="flex flex-col gap-2 p-2.5 bg-[var(--paper-card)] border border-[var(--ink-200)] rounded-[5px]"
+      >
+        {meta}
+        <div className="flex items-center gap-1.5 border-t border-[var(--ink-100)] pt-2">
+          <Button variant="secondary" size="sm" icon={RotateCcw} onClick={() => onRestore(config)}>
+            Restore
+          </Button>
+          <span className="flex-1" />
+          <IconButton
+            icon={Share2}
+            variant="outline"
+            title="Copy shareable link"
+            onClick={() => onShare(config)}
+          />
+          <IconButton
+            icon={Trash2}
+            variant="outline"
+            title="Delete"
+            onClick={() => onDelete(config.id)}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      data-testid="history-card"
+      className="group relative flex flex-col p-2.5 bg-[var(--paper-card)] border border-[var(--ink-200)] rounded-[5px] transition-all duration-[140ms] hover:border-[var(--ink-400)] hover:shadow-[var(--shadow-sm)]"
+    >
+      {meta}
       <div className="absolute top-1.5 right-1.5 flex opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto group-focus-within:opacity-100 group-focus-within:pointer-events-auto transition-opacity duration-[140ms] gap-1 bg-[var(--paper-card)] p-0.5 border border-[var(--border-hairline)] rounded-[3px] shadow-[var(--shadow-sm)]">
         <IconButton icon={RotateCcw} size="sm" title="Restore" onClick={() => onRestore(config)} />
         <IconButton

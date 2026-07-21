@@ -7,6 +7,7 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: "primary" | "secondary";
   icon?: LucideIcon;
   fullWidth?: boolean;
+  size?: "sm" | "md";
   children: ReactNode;
 }
 
@@ -14,12 +15,14 @@ export function Button({
   variant = "primary",
   icon: Icon,
   fullWidth,
+  size = "md",
   children,
   className = "",
   ...rest
 }: ButtonProps) {
-  const base =
-    "inline-flex items-center justify-center gap-2 h-[38px] px-4 rounded-[2px] text-[13px] font-semibold cursor-pointer transition-colors duration-[140ms] disabled:cursor-not-allowed";
+  const sizeClass =
+    size === "sm" ? "h-[30px] px-2.5 text-xs gap-1.5" : "h-[38px] px-4 text-[13px] gap-2";
+  const base = `inline-flex items-center justify-center ${sizeClass} rounded-[2px] font-semibold cursor-pointer transition-colors duration-[140ms] disabled:cursor-not-allowed`;
   const variants = {
     primary:
       "bg-[var(--ink-900)] text-[var(--paper-0)] border border-[var(--ink-900)] hover:bg-[var(--ink-700)] disabled:bg-[var(--ink-300)] disabled:border-[var(--ink-300)]",
@@ -32,7 +35,7 @@ export function Button({
       className={`${base} ${variants[variant]} ${fullWidth ? "w-full" : ""} ${className}`}
       {...rest}
     >
-      {Icon && <Icon className="w-4 h-4" aria-hidden />}
+      {Icon && <Icon className={size === "sm" ? "w-3.5 h-3.5" : "w-4 h-4"} aria-hidden />}
       {children}
     </button>
   );
