@@ -1,4 +1,5 @@
 import { History, PanelLeft } from "lucide-react";
+import { Logo } from "./Logo";
 import { Badge, IconButton } from "./ui";
 
 interface HeaderProps {
@@ -21,7 +22,10 @@ export function Header({ onToggleSidebar, sidebarOpen, onOpenDrawer, hasContent 
       <span className="lg:hidden">
         <IconButton icon={History} title="History" size="lg" onClick={onOpenDrawer} />
       </span>
-      <h1 className="text-[17px] font-semibold text-[var(--text-primary)]">QR Code Generator</h1>
+      <span className="flex items-center gap-2.5">
+        <Logo />
+        <h1 className="text-[17px] font-semibold text-[var(--text-primary)]">QR Code Generator</h1>
+      </span>
       <span className="hidden sm:block w-px h-[22px] bg-[var(--border-hairline)]" aria-hidden />
       <span className="hidden sm:block plico-label">Runs entirely in your browser</span>
       <span className="flex-1" />
