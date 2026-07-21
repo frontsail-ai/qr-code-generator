@@ -4,7 +4,8 @@
    "QR Code Generator UI Redesign"); keep values in sync with it.
    ============================================================ */
 
-@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap");
+/* IBM Plex is loaded from index.html <link> tags — a CSS @import here gets
+   inlined mid-bundle by the production build and silently dropped. */
 
 :root {
   /* ---- Line conventions ---- */
