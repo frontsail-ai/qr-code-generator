@@ -1,6 +1,6 @@
 # QR Code Generator
 
-A client-side QR code generator with live preview and customization. No backend — runs entirely in the browser. Deployed at https://frontsail-qr-code-generator.vercel.app/.
+A client-side QR code generator with live preview and customization. No backend — runs entirely in the browser. Developed and maintained by [FrontSail AI](https://frontsail.ai/). Deployed at https://qr-code-gen.frontsail.app/.
 
 ## Features
 
