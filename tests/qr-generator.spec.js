@@ -7,20 +7,12 @@ test.describe("QR Code Generator", () => {
 
   test.describe("Page Load", () => {
     test("should display the header", async ({ page }) => {
-      await expect(
-        page.getByRole("heading", { name: "QR Code Generator" }),
-      ).toBeVisible();
+      await expect(page.getByRole("heading", { name: "QR Code Generator" })).toBeVisible();
     });
 
-    test("should display QR preview with download buttons", async ({
-      page,
-    }) => {
-      await expect(
-        page.getByRole("button", { name: "Download PNG" }),
-      ).toBeVisible();
-      await expect(
-        page.getByRole("button", { name: "Download SVG" }),
-      ).toBeVisible();
+    test("should display QR preview with download buttons", async ({ page }) => {
+      await expect(page.getByRole("button", { name: "Download PNG" })).toBeVisible();
+      await expect(page.getByRole("button", { name: "Download SVG" })).toBeVisible();
     });
 
     test("should display all QR type tabs", async ({ page }) => {
@@ -67,9 +59,7 @@ test.describe("QR Code Generator", () => {
     test("should generate QR code with email data", async ({ page }) => {
       await page.getByRole("button", { name: "Email" }).click();
 
-      await page
-        .getByPlaceholder("hello@frontsail.ai")
-        .fill("test@frontsail.ai");
+      await page.getByPlaceholder("hello@frontsail.ai").fill("test@frontsail.ai");
       await page.getByPlaceholder("Email subject").fill("Hello");
       await page.getByPlaceholder("Email body").fill("This is a test");
 
@@ -100,9 +90,7 @@ test.describe("QR Code Generator", () => {
   });
 
   test.describe("Text QR Code", () => {
-    test("should switch to text form with character counter", async ({
-      page,
-    }) => {
+    test("should switch to text form with character counter", async ({ page }) => {
       await page.getByRole("button", { name: "Text" }).click();
 
       await expect(page.getByPlaceholder("Enter any text...")).toBeVisible();
@@ -132,15 +120,9 @@ test.describe("QR Code Generator", () => {
       ).toBeVisible();
 
       // The app must stay alive and interactive
-      await expect(
-        page.getByRole("heading", { name: "QR Code Generator" }),
-      ).toBeVisible();
-      await expect(
-        page.getByRole("button", { name: "Download PNG" }),
-      ).toBeDisabled();
-      await expect(
-        page.getByRole("button", { name: "Download SVG" }),
-      ).toBeDisabled();
+      await expect(page.getByRole("heading", { name: "QR Code Generator" })).toBeVisible();
+      await expect(page.getByRole("button", { name: "Download PNG" })).toBeDisabled();
+      await expect(page.getByRole("button", { name: "Download SVG" })).toBeDisabled();
       await expect(page.getByRole("button", { name: "Share" })).toBeDisabled();
     });
 
@@ -160,9 +142,7 @@ test.describe("QR Code Generator", () => {
       await textarea.fill("hello");
 
       await expect(page.locator("section svg").first()).toBeVisible();
-      await expect(
-        page.getByRole("button", { name: "Download PNG" }),
-      ).toBeEnabled();
+      await expect(page.getByRole("button", { name: "Download PNG" })).toBeEnabled();
       await expect(page.getByRole("button", { name: "Share" })).toBeEnabled();
     });
   });
@@ -171,25 +151,19 @@ test.describe("QR Code Generator", () => {
     test("should switch to vCard form with all fields", async ({ page }) => {
       await page.getByRole("button", { name: "vCard" }).click();
 
-      await expect(
-        page.getByRole("textbox", { name: "John", exact: true }),
-      ).toBeVisible();
+      await expect(page.getByRole("textbox", { name: "John", exact: true })).toBeVisible();
       await expect(page.getByPlaceholder("Doe")).toBeVisible();
       await expect(page.getByPlaceholder("+1 234 567 8900")).toBeVisible();
       await expect(page.getByPlaceholder("john@frontsail.ai")).toBeVisible();
       await expect(page.getByPlaceholder("Company Inc.")).toBeVisible();
       await expect(page.getByPlaceholder("Manager")).toBeVisible();
-      await expect(
-        page.locator('input[placeholder="frontsail.ai"]'),
-      ).toBeVisible();
+      await expect(page.locator('input[placeholder="frontsail.ai"]')).toBeVisible();
     });
 
     test("should generate QR code with vCard data", async ({ page }) => {
       await page.getByRole("button", { name: "vCard" }).click();
 
-      await page
-        .getByRole("textbox", { name: "John", exact: true })
-        .fill("Jane");
+      await page.getByRole("textbox", { name: "John", exact: true }).fill("Jane");
       await page.getByPlaceholder("Doe").fill("Smith");
       await page.getByPlaceholder("john@frontsail.ai").fill("jane@company.com");
 
@@ -202,20 +176,12 @@ test.describe("QR Code Generator", () => {
 
   test.describe("Color Customization", () => {
     test("should display color preset buttons", async ({ page }) => {
-      await expect(
-        page.getByRole("button", { name: "#000000" }).first(),
-      ).toBeVisible();
-      await expect(
-        page.getByRole("button", { name: "#DC2626" }).first(),
-      ).toBeVisible();
-      await expect(
-        page.getByRole("button", { name: "#7C3AED" }).first(),
-      ).toBeVisible();
+      await expect(page.getByRole("button", { name: "#000000" }).first()).toBeVisible();
+      await expect(page.getByRole("button", { name: "#DC2626" }).first()).toBeVisible();
+      await expect(page.getByRole("button", { name: "#7C3AED" }).first()).toBeVisible();
     });
 
-    test("should change foreground color when preset clicked", async ({
-      page,
-    }) => {
+    test("should change foreground color when preset clicked", async ({ page }) => {
       // Click red color preset (first set is foreground)
       await page.getByRole("button", { name: "#DC2626" }).first().click();
 
@@ -224,9 +190,7 @@ test.describe("QR Code Generator", () => {
       await expect(hexInput).toHaveValue("#DC2626");
     });
 
-    test("should have separate foreground and background color sections", async ({
-      page,
-    }) => {
+    test("should have separate foreground and background color sections", async ({ page }) => {
       await expect(page.getByText("Foreground Color")).toBeVisible();
       await expect(page.getByText("Background Color")).toBeVisible();
     });
@@ -240,9 +204,7 @@ test.describe("QR Code Generator", () => {
       await expect(page.getByRole("button", { name: "◉" })).toBeVisible();
     });
 
-    test("should show second color picker when gradient is selected", async ({
-      page,
-    }) => {
+    test("should show second color picker when gradient is selected", async ({ page }) => {
       // Initially should not show end color label
       await expect(page.getByText("End color")).not.toBeVisible();
 
@@ -254,9 +216,7 @@ test.describe("QR Code Generator", () => {
       await expect(page.getByText("End color")).toBeVisible();
     });
 
-    test("should hide second color when switching back to solid", async ({
-      page,
-    }) => {
+    test("should hide second color when switching back to solid", async ({ page }) => {
       // Select gradient
       await page.getByRole("button", { name: "↗" }).click();
       await expect(page.getByText("End color")).toBeVisible();
@@ -343,30 +303,18 @@ test.describe("QR Code Generator", () => {
 
   test.describe("Dot Style Customization", () => {
     test("should display all dot style options", async ({ page }) => {
-      await expect(
-        page.getByRole("button", { name: "Square", exact: true }).first(),
-      ).toBeVisible();
+      await expect(page.getByRole("button", { name: "Square", exact: true }).first()).toBeVisible();
       await expect(
         page.getByRole("button", { name: "Rounded", exact: true }).first(),
       ).toBeVisible();
-      await expect(
-        page.getByRole("button", { name: "Dots", exact: true }),
-      ).toBeVisible();
-      await expect(
-        page.getByRole("button", { name: "Classy", exact: true }),
-      ).toBeVisible();
-      await expect(
-        page.getByRole("button", { name: "Classy Rounded", exact: true }),
-      ).toBeVisible();
-      await expect(
-        page.getByRole("button", { name: "Extra Rounded", exact: true }),
-      ).toBeVisible();
+      await expect(page.getByRole("button", { name: "Dots", exact: true })).toBeVisible();
+      await expect(page.getByRole("button", { name: "Classy", exact: true })).toBeVisible();
+      await expect(page.getByRole("button", { name: "Classy Rounded", exact: true })).toBeVisible();
+      await expect(page.getByRole("button", { name: "Extra Rounded", exact: true })).toBeVisible();
     });
 
     test("should change dot style when clicked", async ({ page }) => {
-      const roundedButton = page
-        .getByRole("button", { name: "Rounded" })
-        .first();
+      const roundedButton = page.getByRole("button", { name: "Rounded" }).first();
       await roundedButton.click();
 
       await expect(roundedButton).toHaveClass(/bg-gray-900/);
@@ -381,9 +329,7 @@ test.describe("QR Code Generator", () => {
 
     test("should change corner square style", async ({ page }) => {
       // Find the Dot button in corner square section
-      const cornerSection = page
-        .locator("text=Corner Square Style")
-        .locator("..");
+      const cornerSection = page.locator("text=Corner Square Style").locator("..");
       const dotButton = cornerSection.getByRole("button", { name: "Dot" });
       await dotButton.click();
 
@@ -405,9 +351,7 @@ test.describe("QR Code Generator", () => {
   });
 
   test.describe("Type Persistence", () => {
-    test("should preserve form data when switching between types", async ({
-      page,
-    }) => {
+    test("should preserve form data when switching between types", async ({ page }) => {
       // Enter URL
       await page.getByPlaceholder("frontsail.ai").fill("mywebsite.com");
 
@@ -419,17 +363,13 @@ test.describe("QR Code Generator", () => {
       await page.getByRole("button", { name: "URL" }).click();
 
       // URL should still have the value
-      await expect(page.getByPlaceholder("frontsail.ai")).toHaveValue(
-        "mywebsite.com",
-      );
+      await expect(page.getByPlaceholder("frontsail.ai")).toHaveValue("mywebsite.com");
 
       // Switch to Email again
       await page.getByRole("button", { name: "Email" }).click();
 
       // Email should still have the value
-      await expect(page.getByPlaceholder("hello@frontsail.ai")).toHaveValue(
-        "test@test.com",
-      );
+      await expect(page.getByPlaceholder("hello@frontsail.ai")).toHaveValue("test@test.com");
     });
   });
 
@@ -438,12 +378,8 @@ test.describe("QR Code Generator", () => {
       await page.setViewportSize({ width: 375, height: 667 });
 
       // All sections should be visible and stacked
-      await expect(
-        page.getByRole("heading", { name: "QR Code Generator" }),
-      ).toBeVisible();
-      await expect(
-        page.getByRole("button", { name: "Download PNG" }),
-      ).toBeVisible();
+      await expect(page.getByRole("heading", { name: "QR Code Generator" })).toBeVisible();
+      await expect(page.getByRole("button", { name: "Download PNG" })).toBeVisible();
       await expect(page.getByText("Content")).toBeVisible();
       await expect(page.getByText("Customize")).toBeVisible();
     });
@@ -456,9 +392,7 @@ test.describe("QR Code Generator", () => {
       await page.reload();
     });
 
-    test("should display empty saved configs message initially", async ({
-      page,
-    }) => {
+    test("should display empty saved configs message initially", async ({ page }) => {
       await expect(page.getByText("History")).toBeVisible();
       await expect(page.getByText("No saved configurations yet")).toBeVisible();
     });
@@ -476,9 +410,7 @@ test.describe("QR Code Generator", () => {
       await downloadPromise;
 
       // Should now show the saved config
-      await expect(
-        page.getByText("No saved configurations yet"),
-      ).not.toBeVisible();
+      await expect(page.getByText("No saved configurations yet")).not.toBeVisible();
       await expect(page.getByRole("button", { name: "Restore" })).toBeVisible();
     });
 
@@ -518,9 +450,7 @@ test.describe("QR Code Generator", () => {
       await page.getByRole("button", { name: "Restore" }).click();
 
       // Check values are restored
-      await expect(page.getByPlaceholder("frontsail.ai")).toHaveValue(
-        "restore-test.com",
-      );
+      await expect(page.getByPlaceholder("frontsail.ai")).toHaveValue("restore-test.com");
     });
 
     test("should delete saved configuration", async ({ page }) => {
@@ -557,9 +487,7 @@ test.describe("QR Code Generator", () => {
       await downloadPromise;
 
       // Should have multiple restore buttons
-      await expect(page.getByRole("button", { name: "Restore" })).toHaveCount(
-        2,
-      );
+      await expect(page.getByRole("button", { name: "Restore" })).toHaveCount(2);
 
       // Clear all
       await page.getByRole("button", { name: "Clear all" }).click();
@@ -568,9 +496,7 @@ test.describe("QR Code Generator", () => {
       await expect(page.getByText("No saved configurations yet")).toBeVisible();
     });
 
-    test("should persist saved configs across page reloads", async ({
-      page,
-    }) => {
+    test("should persist saved configs across page reloads", async ({ page }) => {
       // Create a saved config
       await page.getByPlaceholder("frontsail.ai").fill("persist-test.com");
       await page.waitForTimeout(400);
@@ -605,9 +531,7 @@ test.describe("QR Code Generator", () => {
       await downloadPromise;
 
       // Should have 1 saved config
-      await expect(page.getByRole("button", { name: "Restore" })).toHaveCount(
-        1,
-      );
+      await expect(page.getByRole("button", { name: "Restore" })).toHaveCount(1);
 
       // Make some other change to the form
       await page.getByPlaceholder("frontsail.ai").fill("other-url.com");
@@ -623,9 +547,7 @@ test.describe("QR Code Generator", () => {
       await downloadPromise;
 
       // Should still have only 1 saved config (no duplicate created)
-      await expect(page.getByRole("button", { name: "Restore" })).toHaveCount(
-        1,
-      );
+      await expect(page.getByRole("button", { name: "Restore" })).toHaveCount(1);
     });
 
     test("should create new entry when restoring and downloading modified config", async ({
@@ -640,9 +562,7 @@ test.describe("QR Code Generator", () => {
       await downloadPromise;
 
       // Should have 1 saved config
-      await expect(page.getByRole("button", { name: "Restore" })).toHaveCount(
-        1,
-      );
+      await expect(page.getByRole("button", { name: "Restore" })).toHaveCount(1);
 
       // Restore, then modify
       await page.getByRole("button", { name: "Restore" }).click();
@@ -655,9 +575,7 @@ test.describe("QR Code Generator", () => {
       await downloadPromise;
 
       // Should now have 2 saved configs (new entry for modified config)
-      await expect(page.getByRole("button", { name: "Restore" })).toHaveCount(
-        2,
-      );
+      await expect(page.getByRole("button", { name: "Restore" })).toHaveCount(2);
     });
   });
 });

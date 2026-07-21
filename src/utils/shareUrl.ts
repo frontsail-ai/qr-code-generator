@@ -1,7 +1,4 @@
-import {
-  compressToEncodedURIComponent,
-  decompressFromEncodedURIComponent,
-} from "lz-string";
+import { compressToEncodedURIComponent, decompressFromEncodedURIComponent } from "lz-string";
 import type { Customization, FormDataMap, QRType } from "../types";
 import { DEFAULT_CUSTOMIZATION, DEFAULT_FORM_DATA } from "./constants";
 
@@ -14,13 +11,9 @@ interface SharePayload {
   c: Partial<Omit<Customization, "logo">>;
 }
 
-function stripDefaults(
-  customization: Customization,
-): Partial<Omit<Customization, "logo">> {
+function stripDefaults(customization: Customization): Partial<Omit<Customization, "logo">> {
   const partial: Record<string, unknown> = {};
-  for (const key of Object.keys(
-    DEFAULT_CUSTOMIZATION,
-  ) as (keyof Customization)[]) {
+  for (const key of Object.keys(DEFAULT_CUSTOMIZATION) as (keyof Customization)[]) {
     if (key === "logo") continue;
     if (customization[key] !== DEFAULT_CUSTOMIZATION[key]) {
       partial[key] = customization[key];
@@ -29,9 +22,7 @@ function stripDefaults(
   return partial;
 }
 
-function applyDefaults(
-  partial: Partial<Omit<Customization, "logo">>,
-): Customization {
+function applyDefaults(partial: Partial<Omit<Customization, "logo">>): Customization {
   return { ...DEFAULT_CUSTOMIZATION, ...partial, logo: null };
 }
 

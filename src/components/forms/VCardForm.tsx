@@ -1,9 +1,6 @@
 import type { FormComponentProps, VCardFormData } from "../../types";
 
-export function VCardForm({
-  data,
-  onChange,
-}: FormComponentProps<VCardFormData>) {
+export function VCardForm({ data, onChange }: FormComponentProps<VCardFormData>) {
   const update = (field: keyof VCardFormData, value: string) => {
     onChange({ ...data, [field]: value });
   };
@@ -15,9 +12,7 @@ export function VCardForm({
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">
-            First Name
-          </label>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">First Name</label>
           <input
             type="text"
             value={data.firstName}
@@ -27,9 +22,7 @@ export function VCardForm({
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">
-            Last Name
-          </label>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">Last Name</label>
           <input
             type="text"
             value={data.lastName}
@@ -41,9 +34,7 @@ export function VCardForm({
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1.5">
-          Phone
-        </label>
+        <label className="block text-sm font-medium text-gray-700 mb-1.5">Phone</label>
         <input
           type="tel"
           value={data.phone}
@@ -54,9 +45,7 @@ export function VCardForm({
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1.5">
-          Email
-        </label>
+        <label className="block text-sm font-medium text-gray-700 mb-1.5">Email</label>
         <input
           type="email"
           value={data.email}
@@ -68,9 +57,7 @@ export function VCardForm({
 
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">
-            Organization
-          </label>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">Organization</label>
           <input
             type="text"
             value={data.org}
@@ -80,9 +67,7 @@ export function VCardForm({
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">
-            Title
-          </label>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">Title</label>
           <input
             type="text"
             value={data.title}
@@ -94,9 +79,7 @@ export function VCardForm({
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1.5">
-          Website
-        </label>
+        <label className="block text-sm font-medium text-gray-700 mb-1.5">Website</label>
         <input
           type="url"
           value={data.website}

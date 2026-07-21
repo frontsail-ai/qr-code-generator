@@ -39,18 +39,12 @@ export function LogoUploader({ value, onChange }: LogoUploaderProps) {
 
   return (
     <div>
-      <label className="block text-sm font-medium text-gray-700 mb-2">
-        Logo (optional)
-      </label>
+      <label className="block text-sm font-medium text-gray-700 mb-2">Logo (optional)</label>
 
       {value ? (
         <div className="flex items-center gap-3">
           <div className="w-16 h-16 rounded-lg border border-gray-200 overflow-hidden bg-gray-50 flex items-center justify-center">
-            <img
-              src={value}
-              alt="Logo preview"
-              className="max-w-full max-h-full object-contain"
-            />
+            <img src={value} alt="Logo preview" className="max-w-full max-h-full object-contain" />
           </div>
           <button
             type="button"

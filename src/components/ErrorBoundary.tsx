@@ -8,10 +8,7 @@ interface ErrorBoundaryState {
   hasError: boolean;
 }
 
-export class ErrorBoundary extends Component<
-  ErrorBoundaryProps,
-  ErrorBoundaryState
-> {
+export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   state: ErrorBoundaryState = { hasError: false };
 
   static getDerivedStateFromError(): ErrorBoundaryState {
@@ -23,12 +20,9 @@ export class ErrorBoundary extends Component<
       return (
         <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-xl shadow-lg p-8 text-center max-w-md">
-            <h1 className="text-lg font-semibold text-gray-900 mb-2">
-              Something went wrong
-            </h1>
+            <h1 className="text-lg font-semibold text-gray-900 mb-2">Something went wrong</h1>
             <p className="text-sm text-gray-500 mb-6">
-              The app hit an unexpected error. Reload to continue — your saved
-              history is safe.
+              The app hit an unexpected error. Reload to continue — your saved history is safe.
             </p>
             <button
               type="button"

@@ -9,12 +9,8 @@ export function TextForm({ data, onChange }: FormComponentProps<TextFormData>) {
   return (
     <div>
       <div className="flex justify-between items-baseline mb-1.5">
-        <label className="block text-sm font-medium text-gray-700">
-          Text Content
-        </label>
-        <span
-          className={`text-xs ${charCount > maxLength ? "text-red-500" : "text-gray-400"}`}
-        >
+        <label className="block text-sm font-medium text-gray-700">Text Content</label>
+        <span className={`text-xs ${charCount > maxLength ? "text-red-500" : "text-gray-400"}`}>
           {charCount} / {maxLength}
         </span>
       </div>
@@ -26,9 +22,7 @@ export function TextForm({ data, onChange }: FormComponentProps<TextFormData>) {
         className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent outline-none transition-shadow resize-none"
       />
       {charCount > maxLength && (
-        <p className="text-xs text-red-500 mt-1">
-          Too long to fit in a QR code
-        </p>
+        <p className="text-xs text-red-500 mt-1">Too long to fit in a QR code</p>
       )}
     </div>
   );

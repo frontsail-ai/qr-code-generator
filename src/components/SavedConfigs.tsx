@@ -37,26 +37,17 @@ interface ConfigPreviewProps {
   onShare: (config: SavedConfig) => void;
 }
 
-function ConfigPreview({
-  config,
-  onRestore,
-  onDelete,
-  onShare,
-}: ConfigPreviewProps) {
-  const typeLabel =
-    QR_TYPES.find((t) => t.value === config.qrType)?.label || config.qrType;
+function ConfigPreview({ config, onRestore, onDelete, onShare }: ConfigPreviewProps) {
+  const typeLabel = QR_TYPES.find((t) => t.value === config.qrType)?.label || config.qrType;
   const data = formatQRData(config.qrType, config.formData[config.qrType]);
   const displayData = data.length > 30 ? `${data.substring(0, 30)}...` : data;
 
-  const formattedDate = new Date(config.timestamp).toLocaleDateString(
-    undefined,
-    {
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    },
-  );
+  const formattedDate = new Date(config.timestamp).toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 
   const hasLogo = Boolean(config.customization.logo);
   const colorStyle = getColorStyle(config.customization);
@@ -66,13 +57,8 @@ function ConfigPreview({
       <div className="flex items-start justify-between gap-2 mb-2">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <span
-              className="w-4 h-4 rounded-sm flex-shrink-0"
-              style={colorStyle}
-            />
-            <span className="text-sm font-medium text-gray-900">
-              {typeLabel}
-            </span>
+            <span className="w-4 h-4 rounded-sm flex-shrink-0" style={colorStyle} />
+            <span className="text-sm font-medium text-gray-900">{typeLabel}</span>
             {hasLogo && (
               <span className="flex-shrink-0" title="Has custom logo">
                 <svg
@@ -95,9 +81,7 @@ function ConfigPreview({
             {displayData || "(empty)"}
           </p>
         </div>
-        <span className="text-xs text-gray-400 flex-shrink-0">
-          {formattedDate}
-        </span>
+        <span className="text-xs text-gray-400 flex-shrink-0">{formattedDate}</span>
       </div>
 
       <div className="flex gap-2">
@@ -114,12 +98,7 @@ function ConfigPreview({
           className="text-xs px-2 py-1.5 text-gray-600 hover:bg-gray-100 rounded transition-colors cursor-pointer"
           title="Copy shareable link"
         >
-          <svg
-            className="w-3.5 h-3.5"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
               strokeLinecap="round"
               strokeLinejoin="round"

@@ -3,9 +3,7 @@ import type { FormComponentProps, URLFormData } from "../../types";
 export function URLForm({ data, onChange }: FormComponentProps<URLFormData>) {
   return (
     <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1.5">
-        Website URL
-      </label>
+      <label className="block text-sm font-medium text-gray-700 mb-1.5">Website URL</label>
       <input
         type="url"
         value={data.url}

@@ -3,24 +3,24 @@ help:
 
 [doc("Lint and format code")]
 lint:
-    yarn install
-    yarn format:fix && yarn lint:fix && yarn type-check && yarn format:fix
+    vp install
+    vp check --fix
 
 [doc("Lint with no autofixing (just checking in CI)")]
 lint-ci:
-    yarn install
-    yarn format && yarn lint && yarn type-check
+    vp install
+    vp check
 
 [doc("Run tests")]
 test *TEST_FLAGS:
-    yarn run test {{ TEST_FLAGS }}
+    vp exec playwright test {{ TEST_FLAGS }}
 
 [doc("Build the project")]
 build:
-    yarn install
-    yarn build
+    vp install
+    vp build
 
 [doc("Run dev server")]
 run:
-    yarn install
-    yarn dev
+    vp install
+    vp dev

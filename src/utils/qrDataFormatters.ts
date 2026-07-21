@@ -44,9 +44,7 @@ const formatters: FormatterMap = {
 
     if (data.firstName || data.lastName) {
       lines.push(`N:${data.lastName || ""};${data.firstName || ""}`);
-      lines.push(
-        `FN:${[data.firstName, data.lastName].filter(Boolean).join(" ")}`,
-      );
+      lines.push(`FN:${[data.firstName, data.lastName].filter(Boolean).join(" ")}`);
     }
 
     if (data.org) lines.push(`ORG:${data.org}`);
@@ -54,9 +52,7 @@ const formatters: FormatterMap = {
     if (data.phone) lines.push(`TEL:${data.phone}`);
     if (data.email) lines.push(`EMAIL:${data.email}`);
     if (data.website) {
-      const url = data.website.match(/^https?:\/\//i)
-        ? data.website
-        : `https://${data.website}`;
+      const url = data.website.match(/^https?:\/\//i) ? data.website : `https://${data.website}`;
       lines.push(`URL:${url}`);
     }
 
@@ -65,10 +61,7 @@ const formatters: FormatterMap = {
   },
 };
 
-export function formatQRData<K extends QRType>(
-  type: K,
-  data: FormDataMap[K],
-): string {
+export function formatQRData<K extends QRType>(type: K, data: FormDataMap[K]): string {
   const formatter = formatters[type];
   return formatter ? formatter(data) : "";
 }

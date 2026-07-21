@@ -13,7 +13,7 @@ A client-side QR code generator with live preview and customization. No backend 
 
 ## Tech stack
 
-React 18 + TypeScript, Vite, Tailwind CSS v4, BiomeJS (lint/format), Playwright (E2E tests), qr-code-styling.
+React 19 + TypeScript, Vite+ (`vp` CLI: dev/build/lint/format/type checks via Oxlint/Oxfmt), Bun (package manager), Tailwind CSS v4, Playwright (E2E tests), qr-code-styling.
 
 ## Submitting changes
 

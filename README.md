@@ -19,10 +19,10 @@ Use it online at https://frontsail-qr-code-generator.vercel.app/
 
 ## Tech Stack
 
-- React 18 + TypeScript
-- Vite
+- React 19 + TypeScript
+- [Vite+](https://viteplus.dev/) (dev server, build, lint, format, type checks)
+- Bun (package manager)
 - Tailwind CSS v4
-- BiomeJS (linting & formatting)
 - Playwright (testing)
 - [qr-code-styling](https://github.com/kozakdenys/qr-code-styling)
 
@@ -30,20 +30,20 @@ Use it online at https://frontsail-qr-code-generator.vercel.app/
 
 ### Prerequisites
 
-- Node.js 18+
-- Yarn
+- [Vite+](https://viteplus.dev/guide/) (`vp` CLI; manages Node.js and the package manager)
+- [Bun](https://bun.sh/) 1.3+
 - [just](https://github.com/casey/just) (optional, for convenience commands)
 
 ### Installation
 
 ```bash
-yarn install
+vp install
 ```
 
 ### Development
 
 ```bash
-yarn dev
+vp dev
 ```
 
 Open http://localhost:5173 in your browser.
@@ -51,7 +51,7 @@ Open http://localhost:5173 in your browser.
 ### Production Build
 
 ```bash
-yarn build
+vp build
 ```
 
 The built files will be in the `dist/` directory.
@@ -59,7 +59,7 @@ The built files will be in the `dist/` directory.
 ### Preview Production Build
 
 ```bash
-yarn preview
+vp preview
 ```
 
 ## Project Structure
@@ -102,29 +102,33 @@ just lint-ci     # Lint without fixing (for CI)
 ### Type Checking
 
 ```bash
-yarn type-check
+vp check
 ```
 
 ### Testing
 
 Run all tests:
+
 ```bash
 just test
 ```
 
 Run tests with UI:
+
 ```bash
-yarn test:ui
+bun run test:ui
 ```
 
 Run tests in headed mode (visible browser):
+
 ```bash
-yarn test:headed
+bun run test:headed
 ```
 
 ## CI
 
 GitHub Actions runs on every push/PR to `master`/`main`:
+
 1. Install dependencies
 2. Lint & type-check
 3. Run tests

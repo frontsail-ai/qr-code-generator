@@ -1,12 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { CustomizationPanel } from "./components/customization";
-import {
-  EmailForm,
-  PhoneForm,
-  TextForm,
-  URLForm,
-  VCardForm,
-} from "./components/forms";
+import { EmailForm, PhoneForm, TextForm, URLForm, VCardForm } from "./components/forms";
 import { Header } from "./components/Header";
 import { QRPreview } from "./components/QRPreview";
 import { SavedConfigs } from "./components/SavedConfigs";
@@ -32,9 +26,7 @@ function App() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
   const [showCopiedToast, setShowCopiedToast] = useState(false);
-  const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(
-    undefined,
-  );
+  const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   useEffect(() => {
     if (window.location.hash.startsWith("#s=")) {
@@ -42,8 +34,7 @@ function App() {
     }
   }, []);
 
-  const { savedConfigs, saveConfig, deleteConfig, clearAllConfigs } =
-    useSavedConfigs();
+  const { savedConfigs, saveConfig, deleteConfig, clearAllConfigs } = useSavedConfigs();
 
   const updateFormData = <K extends QRType>(type: K, data: FormDataMap[K]) => {
     setFormData((prev) => ({
@@ -74,17 +65,13 @@ function App() {
 
   const handleShare = useCallback(() => {
     const url = encodeDesignToUrl(qrType, formData, customization);
-    navigator.clipboard.writeText(url).then(showCopiedFeedback);
+    void navigator.clipboard.writeText(url).then(showCopiedFeedback);
   }, [qrType, formData, customization, showCopiedFeedback]);
 
   const handleShareConfig = useCallback(
     (config: SavedConfig) => {
-      const url = encodeDesignToUrl(
-        config.qrType,
-        config.formData,
-        config.customization,
-      );
-      navigator.clipboard.writeText(url).then(showCopiedFeedback);
+      const url = encodeDesignToUrl(config.qrType, config.formData, config.customization);
+      void navigator.clipboard.writeText(url).then(showCopiedFeedback);
     },
     [showCopiedFeedback],
   );
@@ -92,39 +79,20 @@ function App() {
   const renderForm = () => {
     switch (qrType) {
       case "url":
-        return (
-          <URLForm
-            data={formData.url}
-            onChange={(data) => updateFormData("url", data)}
-          />
-        );
+        return <URLForm data={formData.url} onChange={(data) => updateFormData("url", data)} />;
       case "email":
         return (
-          <EmailForm
-            data={formData.email}
-            onChange={(data) => updateFormData("email", data)}
-          />
+          <EmailForm data={formData.email} onChange={(data) => updateFormData("email", data)} />
         );
       case "phone":
         return (
-          <PhoneForm
-            data={formData.phone}
-            onChange={(data) => updateFormData("phone", data)}
-          />
+          <PhoneForm data={formData.phone} onChange={(data) => updateFormData("phone", data)} />
         );
       case "text":
-        return (
-          <TextForm
-            data={formData.text}
-            onChange={(data) => updateFormData("text", data)}
-          />
-        );
+        return <TextForm data={formData.text} onChange={(data) => updateFormData("text", data)} />;
       case "vcard":
         return (
-          <VCardForm
-            data={formData.vcard}
-            onChange={(data) => updateFormData("vcard", data)}
-          />
+          <VCardForm data={formData.vcard} onChange={(data) => updateFormData("vcard", data)} />
         );
     }
   };
@@ -142,10 +110,7 @@ function App() {
 
   const handleDragLeave = useCallback((e: React.DragEvent) => {
     // Only hide if leaving the main area entirely
-    if (
-      e.currentTarget === e.target ||
-      !e.currentTarget.contains(e.relatedTarget as Node)
-    ) {
+    if (e.currentTarget === e.target || !e.currentTarget.contains(e.relatedTarget as Node)) {
       setIsDraggingOver(false);
     }
   }, []);
@@ -218,9 +183,7 @@ function App() {
                     d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
                   />
                 </svg>
-                <p className="text-gray-700 font-medium">
-                  Drop image to set as logo
-                </p>
+                <p className="text-gray-700 font-medium">Drop image to set as logo</p>
               </div>
             </div>
           )}
@@ -237,16 +200,11 @@ function App() {
             <TypeSelector value={qrType} onChange={setQRType} />
 
             <section className="bg-white rounded-xl p-4">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                Content
-              </h2>
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">Content</h2>
               {renderForm()}
             </section>
 
-            <CustomizationPanel
-              customization={customization}
-              onChange={setCustomization}
-            />
+            <CustomizationPanel customization={customization} onChange={setCustomization} />
           </div>
         </main>
       </div>

@@ -10,9 +10,7 @@ interface ColorInputProps {
 function ColorInput({ value, onChange, label }: ColorInputProps) {
   return (
     <div>
-      {label && (
-        <span className="block text-xs text-gray-500 mb-1">{label}</span>
-      )}
+      {label && <span className="block text-xs text-gray-500 mb-1">{label}</span>}
       <div className="flex items-center gap-2">
         <div className="flex gap-1">
           {PRESET_COLORS.slice(0, 4).map((color) => (
@@ -21,9 +19,7 @@ function ColorInput({ value, onChange, label }: ColorInputProps) {
               key={color}
               onClick={() => onChange(color)}
               className={`w-6 h-6 rounded-full border-2 transition-transform hover:scale-110 cursor-pointer ${
-                value === color
-                  ? "border-gray-900 ring-2 ring-gray-300"
-                  : "border-gray-200"
+                value === color ? "border-gray-900 ring-2 ring-gray-300" : "border-gray-200"
               }`}
               style={{ backgroundColor: color }}
               title={color}
@@ -59,11 +55,7 @@ interface GradientPreviewProps {
   gradientType: GradientType;
 }
 
-function GradientPreview({
-  color1,
-  color2,
-  gradientType,
-}: GradientPreviewProps) {
+function GradientPreview({ color1, color2, gradientType }: GradientPreviewProps) {
   let background: string;
 
   if (gradientType === "none") {
@@ -108,9 +100,7 @@ export function ForegroundColorPicker({
 
   return (
     <div>
-      <label className="block text-sm font-medium text-gray-700 mb-2">
-        Foreground Color
-      </label>
+      <label className="block text-sm font-medium text-gray-700 mb-2">Foreground Color</label>
 
       <div className="space-y-3">
         {/* Gradient type selector */}
@@ -133,11 +123,7 @@ export function ForegroundColorPicker({
               </button>
             ))}
           </div>
-          <GradientPreview
-            color1={color1}
-            color2={color2}
-            gradientType={gradientType}
-          />
+          <GradientPreview color1={color1} color2={color2} gradientType={gradientType} />
         </div>
 
         {/* Color 1 */}
@@ -148,13 +134,7 @@ export function ForegroundColorPicker({
         />
 
         {/* Color 2 (only shown for gradients) */}
-        {isGradient && (
-          <ColorInput
-            value={color2}
-            onChange={onColor2Change}
-            label="End color"
-          />
-        )}
+        {isGradient && <ColorInput value={color2} onChange={onColor2Change} label="End color" />}
       </div>
     </div>
   );

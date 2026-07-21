@@ -1,9 +1,6 @@
 import type { EmailFormData, FormComponentProps } from "../../types";
 
-export function EmailForm({
-  data,
-  onChange,
-}: FormComponentProps<EmailFormData>) {
+export function EmailForm({ data, onChange }: FormComponentProps<EmailFormData>) {
   const update = (field: keyof EmailFormData, value: string) => {
     onChange({ ...data, [field]: value });
   };
@@ -11,9 +8,7 @@ export function EmailForm({
   return (
     <div className="space-y-4">
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1.5">
-          Email Address
-        </label>
+        <label className="block text-sm font-medium text-gray-700 mb-1.5">Email Address</label>
         <input
           type="email"
           value={data.to}

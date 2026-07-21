@@ -14,20 +14,20 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Setup Vite+
+        uses: voidzero-dev/setup-vp@v1
         with:
-          node-version: '20'
-          cache: 'yarn'
+          node-version: "22"
+          cache: true
 
       - name: Install just
         uses: extractions/setup-just@v2
 
       - name: Install dependencies
-        run: yarn install --frozen-lockfile
+        run: vp install --frozen-lockfile
 
       - name: Install Playwright browsers
-        run: npx playwright install --with-deps chromium
+        run: vp exec playwright install --with-deps chromium
 
       - name: Run lint
         run: just lint-ci

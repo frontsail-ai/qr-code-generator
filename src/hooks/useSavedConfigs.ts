@@ -33,8 +33,7 @@ interface UseSavedConfigsReturn {
 
 export function useSavedConfigs(): UseSavedConfigsReturn {
   // Initialize state from localStorage (lazy initialization)
-  const [savedConfigs, setSavedConfigs] =
-    useState<SavedConfig[]>(loadFromStorage);
+  const [savedConfigs, setSavedConfigs] = useState<SavedConfig[]>(loadFromStorage);
 
   // Save to localStorage whenever configs change
   useEffect(() => {
@@ -57,11 +56,7 @@ export function useSavedConfigs(): UseSavedConfigsReturn {
           ...existing,
           timestamp: new Date().toISOString(),
         };
-        return [
-          updated,
-          ...prev.slice(0, existingIndex),
-          ...prev.slice(existingIndex + 1),
-        ];
+        return [updated, ...prev.slice(0, existingIndex), ...prev.slice(existingIndex + 1)];
       }
 
       // Create new config

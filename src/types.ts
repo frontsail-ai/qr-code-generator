@@ -8,13 +8,7 @@ export interface QRTypeOption {
 }
 
 // Dot and corner style types
-export type DotType =
-  | "square"
-  | "rounded"
-  | "dots"
-  | "classy"
-  | "classy-rounded"
-  | "extra-rounded";
+export type DotType = "square" | "rounded" | "dots" | "classy" | "classy-rounded" | "extra-rounded";
 
 export type CornerSquareType = "square" | "dot" | "extra-rounded";
 

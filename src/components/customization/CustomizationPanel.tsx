@@ -16,14 +16,8 @@ interface CustomizationPanelProps {
   onChange: (customization: Customization) => void;
 }
 
-export function CustomizationPanel({
-  customization,
-  onChange,
-}: CustomizationPanelProps) {
-  const update = <K extends keyof Customization>(
-    field: K,
-    value: Customization[K],
-  ) => {
+export function CustomizationPanel({ customization, onChange }: CustomizationPanelProps) {
+  const update = <K extends keyof Customization>(field: K, value: Customization[K]) => {
     onChange({ ...customization, [field]: value });
   };
 
@@ -37,9 +31,7 @@ export function CustomizationPanel({
         gradientType={customization.gradientType}
         onColor1Change={(value: string) => update("foregroundColor", value)}
         onColor2Change={(value: string) => update("foregroundColor2", value)}
-        onGradientTypeChange={(value: GradientType) =>
-          update("gradientType", value)
-        }
+        onGradientTypeChange={(value: GradientType) => update("gradientType", value)}
       />
 
       <ColorPicker
@@ -56,9 +48,7 @@ export function CustomizationPanel({
       <CornerStyleSelector
         squareValue={customization.cornerSquareType}
         dotValue={customization.cornerDotType}
-        onSquareChange={(value: CornerSquareType) =>
-          update("cornerSquareType", value)
-        }
+        onSquareChange={(value: CornerSquareType) => update("cornerSquareType", value)}
         onDotChange={(value: CornerDotType) => update("cornerDotType", value)}
       />
 

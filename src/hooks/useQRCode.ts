@@ -139,14 +139,14 @@ export function useQRCode(
         data: data || "https://frontsail.ai",
         ...mapOptionsToQRConfig(options),
       });
-      hiResQR.download({ name: "qr-code", extension: "png" });
+      void hiResQR.download({ name: "qr-code", extension: "png" });
     } catch {
       // The preview already shows the error; there is nothing to download
     }
   }, [data, options]);
 
   const downloadSVG = useCallback(() => {
-    qrCodeRef.current?.download({ name: "qr-code", extension: "svg" });
+    void qrCodeRef.current?.download({ name: "qr-code", extension: "svg" });
   }, []);
 
   return { downloadPNG, downloadSVG, error };
