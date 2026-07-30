@@ -23,7 +23,7 @@
 
 - **Five content types:** URL, Email, Phone, Text, vCard
 - **Live preview:** the code redraws as you type, with a capacity guard instead of silent failures
-- **Styling:** solid or gradient foregrounds (linear/radial), background colors, 6 dot styles, corner styles, and logo overlays with a scannability warning
+- **Styling:** solid or gradient foregrounds (linear/radial), background colors (or none, for a transparent export), 6 dot styles, corner styles, and logo overlays with a scannability warning
 - **History:** every download is saved locally with a live thumbnail — restore, share, or delete any past design
 - **Sharing:** designs encode into self-sufficient URLs; the recipient's browser rebuilds the design with nothing stored server-side
 - **Export:** PNG at 2× resolution or SVG

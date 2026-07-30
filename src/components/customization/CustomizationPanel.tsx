@@ -39,6 +39,7 @@ export function CustomizationPanel({ customization, onChange }: CustomizationPan
         label="Background"
         value={customization.backgroundColor}
         onChange={(value: string) => update("backgroundColor", value)}
+        allowTransparent
       />
 
       <DotStyleSelector

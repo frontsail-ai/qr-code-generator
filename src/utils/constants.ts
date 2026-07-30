@@ -51,6 +51,15 @@ export const PRESET_COLORS: string[] = [
   "#A9702F",
 ];
 
+/* Sentinel background value. qr-code-styling paints the backdrop rect with
+   this fill, so both the SVG and the rasterized PNG keep a zero-alpha
+   background. It travels through history and shared links like any color. */
+export const TRANSPARENT = "transparent";
+
+export function isTransparent(color: string): boolean {
+  return color === TRANSPARENT;
+}
+
 // Background presets favor warm papers alongside the deep hues
 export const BG_PRESET_COLORS: string[] = [
   "#1B1812",

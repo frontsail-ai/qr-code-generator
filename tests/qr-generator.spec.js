@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { expect, test } from "@playwright/test";
 
 test.describe("QR Code Generator", () => {
@@ -236,6 +237,110 @@ test.describe("QR Code Generator", () => {
 
       await expect(radialButton).toHaveAttribute("aria-pressed", "true");
       await expect(page.getByText("End", { exact: true })).toBeVisible();
+    });
+  });
+
+  test.describe("Transparent Background", () => {
+    const toggle = (page) => page.getByRole("button", { name: "Transparent" });
+
+    /* Decodes a downloaded PNG in the page and counts fully-transparent
+       pixels — the only honest proof that alpha survived the export. */
+    async function countTransparentPixels(page, download) {
+      const buffer = readFileSync(await download.path());
+      return page.evaluate(
+        async (dataUrl) => {
+          const img = new Image();
+          await new Promise((resolve, reject) => {
+            img.onload = resolve;
+            img.onerror = reject;
+            img.src = dataUrl;
+          });
+          const canvas = document.createElement("canvas");
+          canvas.width = img.width;
+          canvas.height = img.height;
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(img, 0, 0);
+          const { data } = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          let transparent = 0;
+          for (let i = 3; i < data.length; i += 4) {
+            if (data[i] === 0) transparent++;
+          }
+          return transparent;
+        },
+        `data:image/png;base64,${buffer.toString("base64")}`,
+      );
+    }
+
+    test("should toggle transparency and read out NONE instead of a hex", async ({ page }) => {
+      await expect(toggle(page)).toHaveAttribute("aria-pressed", "false");
+
+      await toggle(page).click();
+      await expect(toggle(page)).toHaveAttribute("aria-pressed", "true");
+      await expect(page.getByText("NONE", { exact: true })).toBeVisible();
+
+      // Toggling back restores the previous solid color
+      await toggle(page).click();
+      await expect(toggle(page)).toHaveAttribute("aria-pressed", "false");
+      await expect(page.getByText("NONE", { exact: true })).not.toBeVisible();
+    });
+
+    test("should turn transparency off when a background preset is picked", async ({ page }) => {
+      await toggle(page).click();
+      await expect(toggle(page)).toHaveAttribute("aria-pressed", "true");
+
+      // The second #2C4A8A swatch belongs to the background palette
+      await page.getByRole("button", { name: "#2C4A8A" }).nth(1).click();
+      await expect(toggle(page)).toHaveAttribute("aria-pressed", "false");
+    });
+
+    test("should render the QR backdrop with zero alpha", async ({ page }) => {
+      await page.getByPlaceholder("frontsail.ai").fill("transparent-test.com");
+      await toggle(page).click();
+      await page.waitForTimeout(400);
+
+      const svg = page.locator("section").first().locator("svg").first();
+      await expect(svg.locator('rect[fill="transparent"]')).toHaveCount(1);
+    });
+
+    test("should export a PNG that keeps its alpha channel", async ({ page }) => {
+      await page.getByPlaceholder("frontsail.ai").fill("alpha-test.com");
+      await page.waitForTimeout(400);
+
+      // Baseline: a solid background must be fully opaque
+      const opaqueDownload = page.waitForEvent("download");
+      await page.getByRole("button", { name: "Download PNG" }).click();
+      const opaquePixels = await countTransparentPixels(page, await opaqueDownload);
+      expect(opaquePixels).toBe(0);
+
+      await toggle(page).click();
+      await page.waitForTimeout(400);
+
+      const transparentDownload = page.waitForEvent("download");
+      await page.getByRole("button", { name: "Download PNG" }).click();
+      const transparentPixels = await countTransparentPixels(page, await transparentDownload);
+      expect(transparentPixels).toBeGreaterThan(0);
+    });
+
+    test("should survive a restore from history", async ({ page }) => {
+      await page.evaluate(() => localStorage.clear());
+      await page.reload();
+
+      await page.getByPlaceholder("frontsail.ai").fill("transparent-restore.com");
+      await toggle(page).click();
+      await page.waitForTimeout(400);
+
+      const downloadPromise = page.waitForEvent("download");
+      await page.getByRole("button", { name: "Download PNG" }).click();
+      await downloadPromise;
+
+      // Move away from transparency, then restore
+      await page.getByRole("button", { name: "#2C4A8A" }).nth(1).click();
+      await expect(toggle(page)).toHaveAttribute("aria-pressed", "false");
+
+      await page.getByTestId("history-card").first().hover();
+      await page.getByRole("button", { name: "Restore" }).click();
+
+      await expect(toggle(page)).toHaveAttribute("aria-pressed", "true");
     });
   });
 

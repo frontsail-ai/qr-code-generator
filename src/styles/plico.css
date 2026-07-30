@@ -122,6 +122,28 @@ body {
     40px 40px;
 }
 
+/* ---- Alpha checkerboard — stands in for "no background" ---- */
+.plico-checker {
+  --checker-size: 8px;
+  background-color: var(--paper-0);
+  background-image:
+    linear-gradient(45deg, var(--ink-100) 25%, transparent 25%),
+    linear-gradient(-45deg, var(--ink-100) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, var(--ink-100) 75%),
+    linear-gradient(-45deg, transparent 75%, var(--ink-100) 75%);
+  background-size: var(--checker-size) var(--checker-size);
+  background-position:
+    0 0,
+    0 calc(var(--checker-size) / 2),
+    calc(var(--checker-size) / 2) calc(var(--checker-size) / -2),
+    calc(var(--checker-size) / -2) 0;
+}
+
+/* Chip-sized variant for swatches and inline previews */
+.plico-checker-sm {
+  --checker-size: 6px;
+}
+
 /* ---- Mono numerals: tabular + slashed zero ---- */
 .plico-measure {
   font-family: var(--font-mono);
