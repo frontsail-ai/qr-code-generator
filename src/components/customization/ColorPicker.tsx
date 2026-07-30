@@ -1,6 +1,11 @@
 import { Pipette } from "lucide-react";
 import { useState } from "react";
-import { BG_PRESET_COLORS } from "../../utils/constants";
+import {
+  BG_PRESET_COLORS,
+  DEFAULT_CUSTOMIZATION,
+  isTransparent,
+  TRANSPARENT,
+} from "../../utils/constants";
 
 interface SwatchRowProps {
   presets: string[];
@@ -36,8 +41,21 @@ export function SwatchRow({ presets, value, onChange, grid }: SwatchRowProps) {
 }
 
 /* Read-only hex display with the "#" outside the field — the value is set
-   via swatches or the pipette, never typed. */
+   via swatches or the pipette, never typed. A transparent background has no
+   hex, so the field reads it out as "NONE" beside a checkerboard chip. */
 export function HexField({ value }: { value: string }) {
+  if (isTransparent(value)) {
+    return (
+      <span className="inline-flex items-center h-7 border border-[var(--border-hairline)] rounded-[2px] bg-[var(--paper-card)] px-2 gap-1.5">
+        <span
+          className="plico-checker plico-checker-sm w-3.5 h-3.5 rounded-[1px] border border-[var(--border-hairline)]"
+          aria-hidden
+        />
+        <span className="font-mono text-xs tracking-[0.06em] text-[var(--text-primary)]">NONE</span>
+      </span>
+    );
+  }
+
   return (
     <span className="inline-flex items-center h-7 border border-[var(--border-hairline)] rounded-[2px] bg-[var(--paper-card)] px-2 gap-1">
       <span className="font-mono text-xs text-[var(--text-muted)]">#</span>
@@ -141,13 +159,61 @@ export function CustomColorRow({
   );
 }
 
+/* Transparency is a mode, not a color, so it gets its own toggle rather than
+   an eleventh swatch. Turning it off restores the last solid color. */
+function TransparentToggle({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  const active = isTransparent(value);
+  const [lastColor, setLastColor] = useState(
+    active ? DEFAULT_CUSTOMIZATION.backgroundColor : value,
+  );
+
+  const toggle = () => {
+    if (active) {
+      onChange(lastColor);
+    } else {
+      setLastColor(value);
+      onChange(TRANSPARENT);
+    }
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={toggle}
+      aria-pressed={active}
+      title="Export with no background — the QR keeps a transparent backdrop in PNG and SVG"
+      className={`inline-flex items-center gap-2 h-7 pl-1.5 pr-2.5 rounded-[2px] cursor-pointer transition-colors duration-[140ms] ${
+        active
+          ? "border border-[var(--ink-900)] bg-[var(--ink-900)] text-[var(--paper-0)]"
+          : "border border-[var(--border-hairline)] bg-[var(--paper-card)] text-[var(--ink-600)] hover:bg-[var(--paper-50)]"
+      }`}
+    >
+      <span
+        className="plico-checker plico-checker-sm w-4 h-4 rounded-[1px] border border-[var(--border-hairline)]"
+        aria-hidden
+      />
+      <span className="font-mono text-[10px] tracking-[0.06em] uppercase font-medium">
+        Transparent
+      </span>
+    </button>
+  );
+}
+
 interface ColorPickerProps {
   label: string;
   value: string;
   onChange: (value: string) => void;
+  /* Offers "no background" alongside the solid presets */
+  allowTransparent?: boolean;
 }
 
-export function ColorPicker({ label, value, onChange }: ColorPickerProps) {
+export function ColorPicker({ label, value, onChange, allowTransparent }: ColorPickerProps) {
   return (
     <div className="flex flex-col gap-2">
       <span className="font-mono text-[11px] font-medium tracking-[0.08em] uppercase text-[var(--text-secondary)]">
@@ -157,11 +223,14 @@ export function ColorPicker({ label, value, onChange }: ColorPickerProps) {
         <SwatchRow presets={BG_PRESET_COLORS} value={value} onChange={onChange} grid />
         <HexField value={value} />
       </div>
-      <CustomColorRow
-        value={value}
-        onChange={onChange}
-        pickerLabel="Pick a custom background color"
-      />
+      <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1.5">
+        <CustomColorRow
+          value={value}
+          onChange={onChange}
+          pickerLabel="Pick a custom background color"
+        />
+        {allowTransparent && <TransparentToggle value={value} onChange={onChange} />}
+      </div>
     </div>
   );
 }

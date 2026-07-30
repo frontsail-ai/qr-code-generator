@@ -6,7 +6,7 @@ A client-side QR code generator with live preview and customization. No backend 
 
 - **QR types:** URL, Email, Phone, Text, vCard
 - **Live preview:** Real-time QR code updates as you type
-- **Customization:** Foreground/background colors, gradients, 6 dot styles, corner styles, custom logo upload
+- **Customization:** Foreground/background colors (including a transparent background), gradients, 6 dot styles, corner styles, custom logo upload
 - **History:** Auto-saved configurations in localStorage with restore/delete
 - **Export:** Download as PNG (2x resolution) or SVG
 - **Sharing:** Encode designs into self-sufficient URLs (via lz-string compression in the URL hash). Logos are excluded from shared URLs due to size constraints.

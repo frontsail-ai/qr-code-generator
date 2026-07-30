@@ -1,6 +1,7 @@
 import { useRef } from "react";
 import { useQRCode } from "../hooks/useQRCode";
 import type { SavedConfig } from "../types";
+import { isTransparent } from "../utils/constants";
 import { formatQRData } from "../utils/qrDataFormatters";
 
 /* 44px mini QR for history cards. qr-code-styling renders at a fixed
@@ -13,7 +14,11 @@ export function QRThumbnail({ config }: { config: SavedConfig }) {
 
   return (
     <div
-      className="w-11 h-11 shrink-0 border border-[var(--ink-100)] bg-white overflow-hidden"
+      className={`w-11 h-11 shrink-0 border border-[var(--ink-100)] overflow-hidden ${
+        isTransparent(config.customization.backgroundColor)
+          ? "plico-checker plico-checker-sm"
+          : "bg-white"
+      }`}
       aria-hidden
     >
       <div

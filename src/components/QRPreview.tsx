@@ -4,6 +4,7 @@ import { useDebounce } from "../hooks/useDebounce";
 import { useIsDesktop } from "../hooks/useMediaQuery";
 import { useQRCode } from "../hooks/useQRCode";
 import type { Customization, FormDataMap, QRType } from "../types";
+import { isTransparent } from "../utils/constants";
 import { formatQRData } from "../utils/qrDataFormatters";
 import { Badge, Button, IconButton } from "./ui";
 
@@ -34,6 +35,8 @@ export function QRPreview({ qrType, formData, customization, onSave, onShare }: 
 
   const isEmpty = !debouncedData;
   const exportLocked = isEmpty || !!error;
+  // Follows the debounced options so the checkerboard and the QR flip together
+  const transparentBg = isTransparent(debouncedOptions.backgroundColor);
 
   const errorMessage = error?.includes("code length overflow")
     ? "This content is too long to fit in a QR code. Shorten it to generate one."
@@ -50,6 +53,12 @@ export function QRPreview({ qrType, formData, customization, onSave, onShare }: 
   };
 
   const typeLabel = qrType === "vcard" ? "vCard" : qrType.toUpperCase();
+
+  const exportHint = exportLocked
+    ? "Download unlocks when there is content to encode"
+    : `PNG exports at 560 × 560 px · 2×${
+        transparentBg ? " · transparent background" : ""
+      } — downloading also saves to history`;
 
   const exportButtons = (
     <>
@@ -117,7 +126,9 @@ export function QRPreview({ qrType, formData, customization, onSave, onShare }: 
       >
         <div
           ref={containerRef}
-          className="w-[200px] h-[200px] lg:w-[280px] lg:h-[280px] [&_svg]:w-full [&_svg]:h-full"
+          className={`w-[200px] h-[200px] lg:w-[280px] lg:h-[280px] [&_svg]:w-full [&_svg]:h-full ${
+            transparentBg ? "plico-checker" : ""
+          }`}
         />
       </div>
       {isEmpty && (
@@ -165,11 +176,7 @@ export function QRPreview({ qrType, formData, customization, onSave, onShare }: 
               Logo is not included in shared links — files only
             </span>
           ) : (
-            <span className="plico-measure text-[11px] text-[var(--text-muted)]">
-              {exportLocked
-                ? "Download unlocks when there is content to encode"
-                : "PNG exports at 560 × 560 px · 2× — downloading also saves to history"}
-            </span>
+            <span className="plico-measure text-[11px] text-[var(--text-muted)]">{exportHint}</span>
           )}
         </div>
       ) : (

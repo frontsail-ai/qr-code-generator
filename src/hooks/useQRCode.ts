@@ -68,6 +68,8 @@ function mapOptionsToQRConfig(options: Customization) {
       type: options.dotType,
     },
     backgroundOptions: {
+      // "transparent" is a valid fill, so the backdrop rect is still drawn but
+      // carries zero alpha — the SVG and the canvas-rasterized PNG both keep it
       color: options.backgroundColor,
     },
     cornersSquareOptions: {
