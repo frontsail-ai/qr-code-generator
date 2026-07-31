@@ -1,0 +1,65 @@
+{
+  "name": "@frontsail/qr-mcp",
+  "version": "0.1.0",
+  "description": "MCP server that generates QR codes identical to qr-code-gen.frontsail.app",
+  "keywords": [
+    "mcp",
+    "modelcontextprotocol",
+    "qr",
+    "qr-code",
+    "qrcode"
+  ],
+  "homepage": "https://github.com/frontsail-ai/qr-code-generator/tree/master/packages/mcp#readme",
+  "bugs": {
+    "url": "https://github.com/frontsail-ai/qr-code-generator/issues"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/frontsail-ai/qr-code-generator.git",
+    "directory": "packages/mcp"
+  },
+  "bin": {
+    "qr-mcp": "./dist/index.mjs"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "type": "module",
+  "exports": {
+    ".": "./dist/index.mjs",
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "vp pack",
+    "_comment_test": "packs first: the stdio integration test drives dist/, which is what npx runs",
+    "test": "vp pack && vp test --run",
+    "check": "vp check"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "@napi-rs/canvas": "^1.0.3",
+    "@resvg/resvg-js": "^2.6.2",
+    "jsdom": "^30.0.1",
+    "qr-code-styling": "^1.9.2",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@frontsail/qr-core": "workspace:*",
+    "@types/jsdom": "^27.0.0",
+    "@types/node": "^24.10.1",
+    "typescript": "^5.9.3",
+    "vite": "npm:@voidzero-dev/vite-plus-core@0.2.4",
+    "vite-plus": "0.2.4"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "inlinedDependencies": {
+    "lz-string": "1.5.0"
+  }
+}

@@ -17,9 +17,19 @@ Bun workspace monorepo:
 
 - `apps/web` — the deployed app. React components, hooks, `index.html`, `public/`, and the Playwright suite.
 - `packages/core` — `@frontsail/qr-core`: types, presets, data formatters, the qr-code-styling option mapping, and the share-link codec, plus their vitest units. Consumed as raw TypeScript source (`"exports": {".": "./src/index.ts"}`), so there is no build step.
+- `packages/mcp` — `@frontsail/qr-mcp`: the stdio MCP server that renders QR codes for agents. The only publishable package.
 - `tools/*` — reserved in the workspace globs; empty for now.
 
 Rules for `packages/core`: it must stay framework-free and render nothing. Its tsconfig omits the DOM lib, so `window`/`document`/`localStorage` are type errors — pass browser values in as parameters instead (see `encodeDesignToUrl`). Its only dependency is `lz-string`. React-flavored types belong in `apps/web/src/types.ts`.
+
+Rules for `packages/mcp` — each of these was learned by watching a plausible-looking but wrong file get produced, so treat them as invariants rather than preferences:
+
+- **Core is bundled, not depended on.** `@frontsail/qr-core` sits in `devDependencies` precisely so `vp pack` inlines it (with `lz-string`) into `dist/index.mjs`. Moving it to `dependencies` would publish an import of a private package that no consumer can resolve. Core's raw TypeScript is not loadable by plain Node either way.
+- **The library's own canvas/PNG path is forbidden.** Never `type: "canvas"` + `getRawData("png")`: it silently drops logos with node-canvas 2 and paints solid squares with the napi canvas. PNG is always resvg rasterizing the sanitized SVG.
+- **Never add the `canvas` (node-canvas) package.** It carries a `prebuild-install || node-gyp` postinstall that npm is moving to block, and it segfaults under Bun. `@napi-rs/canvas` is the supported canvas.
+- **`nodeCanvas` is always passed, and every `getRawData` call keeps its timeout.** Without a canvas implementation the logo path returns a promise that never settles — a tool call that hangs forever, which is worse for an agent than any error.
+- **Sanitize on the PNG path only.** The `url('#id')` → `url(#id)` rewrite is what makes resvg work, but it changes bytes; applying it to returned SVG would break byte-parity with the web app, which `tests/parity.test.ts` guards using SVGs captured from the live site.
+- Test fixtures must be real-world PNGs. resvg decodes node-canvas-2-encoded PNGs as black, so a fixture built that way would fail for reasons unrelated to the code.
 
 ## Tech stack
 
