@@ -1,6 +1,6 @@
 # MCP server blueprint
 
-**Date:** 2026-07-31 · **Status:** proposed · **Scope:** one PR, new package, no change to `apps/web`
+**Date:** 2026-07-31 · **Status:** implemented ([PR #14](https://github.com/frontsail-ai/qr-code-generator/pull/14)) · **Scope:** one PR, new package, no change to `apps/web`
 
 Add `packages/mcp` — `@frontsail/qr-mcp`, a stdio MCP server that lets an agent generate the same QR codes the web app generates, and mint the same shareable links, without a browser. Publishable but not published in this PR.
 
@@ -112,3 +112,14 @@ Publishing to npm. The scannability skill. HTTP/SSE transports. Batch generation
 1. npm `@frontsail` scope ownership — still unresolved (assumption 7). Blocks publishing, not this PR. Action: working `npm login`, then `npm org ls frontsail`.
 2. Tool naming — `generate_qr_code` / `create_share_link`. Snake case matches common MCP practice; open to `qr_generate` / `qr_share_link` if a prefix is preferred for disambiguation in a crowded tool list.
 3. Whether `create_share_link` should accept a base URL override (useful for staging). Defaulted to the production origin; add only if asked.
+
+## Outcome (2026-07-31, post-implementation)
+
+Implemented in [PR #14](https://github.com/frontsail-ai/qr-code-generator/pull/14). 62 new vitest cases in `packages/mcp` (repo total 146); end-to-end verified by packing the tarball, installing it clean, and driving the `qr-mcp` bin over stdio with a real SDK client. Deviations from the plan as written:
+
+1. **`create_share_link` accepts and silently drops a logo** rather than rejecting it — resolving a file path only to discard the bytes would be wasted I/O and a confusing error. A test asserts output is identical with and without a logo.
+2. **Content fields are nested per type** (`url: { url }`, `vcard: { … }`) rather than flat — email and vcard would collide on `email`/`phone` field names.
+3. **`renderRawSvg` exposes a `nodeCanvas` option** used only by the timeout test (an `in`-check honors an explicit `undefined`); without it the hang guard is untestable. The first version of that test passed in 10 ms because a parameter default silently exercised the normal path — the fixed version consumes 1506 ms of its 1500 ms budget, proving the hang is real.
+4. **The package's `test` script runs `vp pack` first** — the integration test drives `dist/`, which is what `npx` executes.
+
+SDK notes recorded for future work: `tool()` is deprecated in SDK 1.30.0 in favor of `registerTool`; zod is declared directly rather than relied on transitively; the SDK itself is ~24 MB of the ~80 MB cold start. A ~12 MB slimming path exists (pure-JS image-dimension shim + `saveAsBlob: false` + dropping `@napi-rs/canvas`) but changes logo re-encoding behavior and needs its own validation pass.
