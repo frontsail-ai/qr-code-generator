@@ -11,9 +11,19 @@ A client-side QR code generator with live preview and customization. No backend 
 - **Export:** Download as PNG (2x resolution) or SVG
 - **Sharing:** Encode designs into self-sufficient URLs (via lz-string compression in the URL hash). Logos are excluded from shared URLs due to size constraints.
 
+## Layout
+
+Bun workspace monorepo:
+
+- `apps/web` — the deployed app. React components, hooks, `index.html`, `public/`, and the Playwright suite.
+- `packages/core` — `@frontsail/qr-core`: types, presets, data formatters, the qr-code-styling option mapping, and the share-link codec, plus their vitest units. Consumed as raw TypeScript source (`"exports": {".": "./src/index.ts"}`), so there is no build step.
+- `tools/*` — reserved in the workspace globs; empty for now.
+
+Rules for `packages/core`: it must stay framework-free and render nothing. Its tsconfig omits the DOM lib, so `window`/`document`/`localStorage` are type errors — pass browser values in as parameters instead (see `encodeDesignToUrl`). Its only dependency is `lz-string`. React-flavored types belong in `apps/web/src/types.ts`.
+
 ## Tech stack
 
-React 19 + TypeScript, Vite+ (`vp` CLI: dev/build/lint/format/type checks via Oxlint/Oxfmt), Bun (package manager), Tailwind CSS v4, Playwright (E2E tests), qr-code-styling.
+React 19 + TypeScript, Vite+ (`vp` CLI: dev/build/lint/format/type checks via Oxlint/Oxfmt), Bun (package manager, workspaces), Tailwind CSS v4, Vitest (core unit tests), Playwright (E2E tests), qr-code-styling.
 
 ## Submitting changes
 

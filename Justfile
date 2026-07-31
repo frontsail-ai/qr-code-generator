@@ -11,16 +11,16 @@ lint-ci:
     vp install
     vp check
 
-[doc("Run tests")]
+[doc("Run tests (core unit tests + web e2e)")]
 test *TEST_FLAGS:
-    vp exec playwright test {{ TEST_FLAGS }}
+    vp run -r test {{ TEST_FLAGS }}
 
 [doc("Build the project")]
 build:
     vp install
-    vp build
+    vp run web#build
 
 [doc("Run dev server")]
 run:
     vp install
-    vp dev
+    vp run web#dev

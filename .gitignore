@@ -2,6 +2,7 @@ node_modules/
 dist/
 .playwright-mcp/
 
+audit-output/
 playwright-report/
 test-results/
 
