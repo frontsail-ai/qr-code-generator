@@ -1,34 +1,24 @@
 {
-  "name": "qr-preview",
+  "name": "qr-code-generator",
   "version": "0.0.0",
   "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*",
+    "tools/*"
+  ],
   "type": "module",
   "scripts": {
-    "dev": "vp dev",
-    "build": "vp build",
-    "preview": "vp preview",
-    "test": "playwright test",
-    "test:ui": "playwright test --ui",
-    "test:headed": "playwright test --headed",
+    "dev": "vp run web#dev",
+    "build": "vp run web#build",
+    "preview": "vp run web#preview",
+    "test": "vp run -r test",
     "lint": "vp check",
     "lint:fix": "vp check --fix",
     "format": "vp fmt --check",
     "format:fix": "vp fmt --write"
   },
-  "dependencies": {
-    "lucide-react": "^1.25.0",
-    "lz-string": "^1.5.0",
-    "qr-code-styling": "^1.9.2",
-    "react": "^19.2.8",
-    "react-dom": "^19.2.8"
-  },
   "devDependencies": {
-    "@playwright/test": "^1.57.0",
-    "@tailwindcss/vite": "^4.0.0",
-    "@types/react": "^19.2.17",
-    "@types/react-dom": "^19.2.3",
-    "@vitejs/plugin-react": "^4.3.4",
-    "tailwindcss": "^4.0.0",
     "typescript": "^5.9.3",
     "vite": "npm:@voidzero-dev/vite-plus-core@0.2.4",
     "vite-plus": "0.2.4"

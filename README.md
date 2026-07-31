@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="public/favicon.svg" width="72" alt="Module Q — the QR Code Generator mark">
+  <img src="apps/web/public/favicon.svg" width="72" alt="Module Q — the QR Code Generator mark">
 </p>
 
 <h1 align="center">QR Code Generator</h1>
@@ -29,13 +29,31 @@
 - **Export:** PNG at 2× resolution or SVG
 - **Workspace UI:** three-pane desktop layout on an engineering-grid canvas; mobile gets a history drawer and a sticky export bar
 
+## Repository layout
+
+A Bun workspace monorepo:
+
+```
+apps/
+  web/        the deployed app (React, Vite+, Playwright e2e)
+packages/
+  core/       @frontsail/qr-core — framework-free QR logic + vitest units
+```
+
+`packages/core` holds the parts that have nothing to do with React: types,
+presets, data formatters, the qr-code-styling option mapping, and the
+share-link codec. It renders nothing and its tsconfig omits the DOM lib, so a
+stray `window` is a type error. The app consumes its TypeScript source
+directly — there is no build step for the package. `tools/*` is reserved in
+the workspace globs for later.
+
 ## Tech stack
 
 - React 19 + TypeScript
 - [Vite+](https://viteplus.dev/) (dev server, build, lint, format, type checks)
-- [Bun](https://bun.sh/) (package manager)
+- [Bun](https://bun.sh/) (package manager, workspaces)
 - Tailwind CSS v4
-- Playwright (E2E testing)
+- Vitest (unit tests) and Playwright (E2E testing)
 - [qr-code-styling](https://github.com/kozakdenys/qr-code-styling)
 
 ## Getting started
@@ -55,7 +73,7 @@ vp install
 ### Development
 
 ```bash
-vp dev
+just run     # or: vp run web#dev
 ```
 
 Open http://localhost:5173 in your browser.
@@ -63,10 +81,10 @@ Open http://localhost:5173 in your browser.
 ### Production build
 
 ```bash
-vp build
+just build   # or: vp run web#build
 ```
 
-The built files will be in the `dist/` directory. Preview with `vp preview`.
+The built files will be in `apps/web/dist/`. Preview with `vp run web#preview`.
 
 ## Development workflow
 
@@ -86,10 +104,14 @@ just lint-ci     # Check-only mode (what CI runs)
 ### Testing
 
 ```bash
-just test              # Full Playwright suite
-bun run test:ui        # Playwright UI mode
-bun run test:headed    # Visible browser
+just test                          # Core unit tests + the full Playwright suite
+vp run '@frontsail/qr-core#test'   # Unit tests only
+vp run web#test:ui                 # Playwright UI mode
+vp run web#test:headed             # Visible browser
 ```
+
+The e2e suite starts its own dev server on port 5177 and never reuses a
+running one, so it can't accidentally test whatever else is on 5173.
 
 ## CI
 
