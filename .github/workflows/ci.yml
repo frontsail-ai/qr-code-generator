@@ -26,8 +26,11 @@ jobs:
       - name: Install dependencies
         run: vp install --frozen-lockfile
 
+      # Playwright is a dependency of apps/web, so its binary is linked there
+      # rather than at the workspace root.
       - name: Install Playwright browsers
         run: vp exec playwright install --with-deps chromium
+        working-directory: apps/web
 
       - name: Run lint
         run: just lint-ci
