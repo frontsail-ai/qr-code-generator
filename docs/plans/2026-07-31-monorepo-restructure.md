@@ -1,6 +1,6 @@
 # Monorepo restructure blueprint
 
-**Date:** 2026-07-31 · **Status:** proposed · **Scope:** one PR, zero behavior change
+**Date:** 2026-07-31 · **Status:** implemented ([PR #13](https://github.com/frontsail-ai/qr-code-generator/pull/13)) · **Scope:** one PR, zero behavior change
 
 Restructure the repo into a Bun-workspace monorepo — `apps/web` (the deployed app) + `packages/core` (framework-free QR logic) — keeping Bun as the package manager and validating the Vercel deploy via the PR's own preview build before merge.
 
@@ -92,3 +92,13 @@ MCP server, skill authoring, npm publishing, Node-side rendering. Core's API is 
 1. Internal package name `@frontsail/qr-core` — cosmetic (private package), default stands unless objected.
 2. npm `@frontsail` scope ownership — unverified (local npm token invalid; org page not publicly inspectable). Not blocking this PR; blocks the MCP package's name in PR 2. Action: `npm login` + `npm org ls frontsail`.
 3. `tools/*` reserved in workspace globs now — included (costs nothing); objections welcome.
+
+## Outcome (2026-07-31, post-implementation)
+
+Implemented in [PR #13](https://github.com/frontsail-ai/qr-code-generator/pull/13). All merge gates met: 37 core vitest units + 47 Playwright e2e green, Vercel preview build green with the config-as-code approach — no dashboard change needed (assumption 8 resolved to Confirmed). Deviations from the plan as written:
+
+1. **Step 6's "ci.yml needs no edits" was falsified.** Recipe names did cover `lint-ci`/`test`/`build`, but the workflow also calls `vp exec playwright install` directly, and Bun's isolated linker places the Playwright binary in `apps/web/node_modules/.bin`, not the root. Fix: `working-directory: apps/web` on that step. Trap worth remembering: a globally installed Playwright on PATH masks this locally — root-level `vp exec` can silently resolve the wrong binary.
+2. `decodeDesignFromUrl` also takes a parameter (the hash string), not just the encode side — it read `window.location.hash`, which the DOM-less tsconfig correctly rejected.
+3. `URLSearchParams` needed a narrow ambient declaration (`packages/core/src/platform.d.ts`): it is a WHATWG global in every runtime but ships only in TypeScript's DOM lib. Declaring the two members used preserves the no-DOM guardrail (verified: `typeof window` in core still fails with TS2304).
+4. `encodeDesignToUrl` takes `baseUrl` rather than `origin` — origin alone would drop the pathname and change emitted links.
+5. No empty `tools/` directory (git cannot track one); the `tools/*` glob alone is the reservation, and `vp install` tolerates the directory not existing.
