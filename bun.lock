@@ -45,10 +45,10 @@
       },
     },
     "packages/mcp": {
-      "name": "@frontsail/qr-mcp",
+      "name": "@frontsail-ai/qr-mcp",
       "version": "0.1.0",
       "bin": {
-        "qr-mcp": "./dist/index.mjs",
+        "qr-mcp": "dist/index.mjs",
       },
       "dependencies": {
         "@modelcontextprotocol/sdk": "^1.30.0",
@@ -134,9 +134,9 @@
 
     "@exodus/bytes": ["@exodus/bytes@1.15.1", "", { "peerDependencies": { "@noble/hashes": "^1.8.0 || ^2.0.0" }, "optionalPeers": ["@noble/hashes"] }, "sha512-S6mL0yNB/Abt9Ei4tq8gDhcczc4S3+vQ4ra7vxnAf+YHC02srtqxKKZghx2Dq6p0e66THKwR6r8N6P95wEty7Q=="],
 
-    "@frontsail/qr-core": ["@frontsail/qr-core@workspace:packages/core"],
+    "@frontsail-ai/qr-mcp": ["@frontsail-ai/qr-mcp@workspace:packages/mcp"],
 
-    "@frontsail/qr-mcp": ["@frontsail/qr-mcp@workspace:packages/mcp"],
+    "@frontsail/qr-core": ["@frontsail/qr-core@workspace:packages/core"],
 
     "@hono/node-server": ["@hono/node-server@2.0.12", "", { "peerDependencies": { "hono": "^4" } }, "sha512-eWpQYr67tqJLeaSUl0Q+TquuYfUdTibpOJlUMV2FfUP7+KqCC5TufnwnlXL6mobZBJbGAYRd7ZvEBDCbLInjhg=="],
 

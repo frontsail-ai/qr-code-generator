@@ -7,7 +7,7 @@ import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js"
 import { afterAll, beforeAll, describe, expect, test } from "vite-plus/test";
 
 /* Exercises the built artifact over a real stdio transport, with the SDK's own
-   client — the same path `npx -y @frontsail/qr-mcp` takes. The package's test
+   client — the same path `npx -y @frontsail-ai/qr-mcp` takes. The package's test
    script runs `vp pack` first so dist/ is present and current. */
 const SERVER_ENTRY = fileURLToPath(new URL("../dist/index.mjs", import.meta.url));
 const LOGO_PATH = fileURLToPath(new URL("./fixtures/logo.png", import.meta.url));

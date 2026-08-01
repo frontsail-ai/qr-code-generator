@@ -1,4 +1,4 @@
-# @frontsail/qr-mcp
+# @frontsail-ai/qr-mcp
 
 An [MCP](https://modelcontextprotocol.io/) server that generates QR codes identical to the ones [qr-code-gen.frontsail.app](https://qr-code-gen.frontsail.app/) produces — same dot and corner styles, same palette, same transparent-background handling, same share links.
 
@@ -13,10 +13,16 @@ Add it to your MCP client's config:
   "mcpServers": {
     "qr-code-generator": {
       "command": "npx",
-      "args": ["-y", "@frontsail/qr-mcp"]
+      "args": ["-y", "@frontsail-ai/qr-mcp"]
     }
   }
 }
+```
+
+In Claude Code, one line does the same thing:
+
+```bash
+claude mcp add qr -- npx -y @frontsail-ai/qr-mcp
 ```
 
 Requires Node 20+. The first run downloads roughly 80 MB of dependencies (jsdom, a native canvas, and an SVG rasterizer); subsequent runs use the npx cache.
@@ -56,6 +62,17 @@ Takes the same design inputs and returns a `qr-code-gen.frontsail.app` link that
 
 - **SVG without a logo is byte-identical** to the file the web app downloads, aside from an internal id counter with no rendered effect. A test in this repo enforces that against SVGs captured from the live site.
 - **PNG and logo SVGs are the same design, not the same bytes.** PNGs are rasterized with resvg rather than Chromium, and the library re-encodes logo images, so exact byte equality is not achievable. Ask for SVG when you need exactness.
+
+## Releasing
+
+From `packages/mcp`:
+
+1. **Bump the version in two places** — `package.json` and `SERVER_VERSION` in `src/server.ts`. They are separate constants today; the version an MCP client sees in the handshake comes from the latter.
+2. `vp run test` from the repo root — the package's test script packs first, so this also proves the build.
+3. `npm publish --dry-run --access public` and read the output. Confirm the file list is exactly `dist/index.mjs`, `README.md`, `package.json`, and that **no `npm warn publish` lines appear** — npm silently drops malformed fields rather than failing, and a stripped `bin` would break `npx` for everyone while the tarball still looks fine locally.
+4. `npm publish --access public`. The `--access public` is not optional: scoped packages default to restricted, and without it the first publish fails on a free account.
+5. Tag the release: `git tag qr-mcp-v<version> && git push origin qr-mcp-v<version>`.
+6. Smoke-test the real thing: `npx -y @frontsail-ai/qr-mcp` should start and speak MCP on stdio.
 
 ## License
 
