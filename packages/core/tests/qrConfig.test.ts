@@ -17,10 +17,13 @@ describe("buildGradient", () => {
     });
   });
 
-  test("maps bottom-left to top-right to a 45° rotation", () => {
+  /* Rotation is the gradient vector's angle in SVG coordinates, where y grows
+     downward — so "toward the top" is a negative angle. See the note in
+     qrConfig.ts; the mcp package renders these and samples the corners. */
+  test("points bottom-left to top-right up and to the right", () => {
     expect(buildGradient("linear-bl-tr", "#000000", "#FFFFFF")).toEqual({
       type: "linear",
-      rotation: Math.PI / 4,
+      rotation: -Math.PI / 4,
       colorStops: [
         { offset: 0, color: "#000000" },
         { offset: 1, color: "#FFFFFF" },
@@ -28,10 +31,18 @@ describe("buildGradient", () => {
     });
   });
 
-  test("maps top-left to bottom-right to a 135° rotation", () => {
+  test("points top-left to bottom-right down and to the right", () => {
     const gradient = buildGradient("linear-tl-br", "#000000", "#FFFFFF");
     expect(gradient?.type).toBe("linear");
-    expect(gradient?.rotation).toBe((3 * Math.PI) / 4);
+    expect(gradient?.rotation).toBe(Math.PI / 4);
+  });
+
+  test("the two linear directions are mirror images, not rotations of each other", () => {
+    const blTr = buildGradient("linear-bl-tr", "#000000", "#FFFFFF");
+    const tlBr = buildGradient("linear-tl-br", "#000000", "#FFFFFF");
+    // Equal magnitude, opposite sign: same horizontal travel, opposite vertical.
+    expect(blTr?.rotation).toBe(-(tlBr?.rotation ?? 0));
+    expect(Math.cos(blTr!.rotation!)).toBeCloseTo(Math.cos(tlBr!.rotation!), 10);
   });
 });
 
@@ -61,7 +72,7 @@ describe("mapOptionsToQRConfig", () => {
     expect(config.dotsOptions.color).toBeUndefined();
     expect(config.dotsOptions.gradient).toEqual({
       type: "linear",
-      rotation: Math.PI / 4,
+      rotation: -Math.PI / 4,
       colorStops: [
         { offset: 0, color: "#1B1812" },
         { offset: 1, color: "#2C4A8A" },

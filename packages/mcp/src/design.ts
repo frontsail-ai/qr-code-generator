@@ -57,10 +57,9 @@ export const customizationSchema = z
       .optional()
       .describe(
         "Foreground gradient. Anything other than 'none' also uses foreground_color_2, which " +
-          "falls back to its default if you do not set it. Heads-up on the two linear values: " +
-          "their names are rotated relative to what actually renders — 'linear-bl-tr' renders " +
-          "top-left to bottom-right, and 'linear-tl-br' renders top-right to bottom-left. The " +
-          "names are kept because they are encoded in existing share links.",
+          "falls back to its default if you do not set it. The linear values name their " +
+          "direction: 'linear-bl-tr' runs bottom-left to top-right, 'linear-tl-br' runs " +
+          "top-left to bottom-right.",
       ),
     background_color: backgroundColor
       .optional()

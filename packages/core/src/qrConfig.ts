@@ -32,12 +32,21 @@ export function buildGradient(
     };
   }
 
-  // Linear gradients
+  /* Linear gradients. qr-code-styling turns `rotation` into the gradient
+     vector (cos θ, sin θ) in SVG coordinates, where y grows *downward* — so a
+     positive angle tilts toward the bottom of the image, not the top.
+
+     The previous values (π/4 and 3π/4) were derived in the usual math
+     convention with y up, which silently flipped both directions vertically:
+     the option labelled "bottom-left to top-right" rendered top-left to
+     bottom-right, and vice versa. The picker's own preview chip uses CSS
+     `linear-gradient(45deg/135deg)`, which does honour the labels, so the
+     swatch and the QR disagreed with each other. */
   let rotation = 0;
   if (gradientType === "linear-bl-tr") {
-    rotation = Math.PI / 4; // 45 degrees
+    rotation = -Math.PI / 4; // toward the top-right: (+x, -y)
   } else if (gradientType === "linear-tl-br") {
-    rotation = (3 * Math.PI) / 4; // 135 degrees
+    rotation = Math.PI / 4; // toward the bottom-right: (+x, +y)
   }
 
   return {
