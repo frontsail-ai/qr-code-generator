@@ -20,7 +20,7 @@ import { PNG_SIZE, RenderError, renderPng, renderSvg, SVG_SIZE } from "./render.
 export const SHARE_BASE_URL = "https://qr-code-gen.frontsail.app/";
 
 export const SERVER_NAME = "qr-code-generator";
-export const SERVER_VERSION = "0.1.0";
+export const SERVER_VERSION = "0.2.0";
 
 function toolError(message: string): CallToolResult {
   return { content: [{ type: "text", text: message }], isError: true };
@@ -63,7 +63,9 @@ export function createServer(): McpServer {
       title: "Generate a QR code",
       description:
         "Generate a styled QR code identical to the one qr-code-gen.frontsail.app produces. " +
-        `Returns SVG text (${SVG_SIZE}px) or a PNG image (${PNG_SIZE}px), or writes it to output_path.`,
+        `Returns SVG text (${SVG_SIZE}px) or a PNG image (${PNG_SIZE}px), or writes it to output_path. ` +
+        "Output includes the 4-module quiet zone the QR standard requires, painted in the " +
+        "background colour, so the file can be placed directly without adding margin.",
       inputSchema: {
         ...contentSchema,
         customization: customizationSchema.optional(),

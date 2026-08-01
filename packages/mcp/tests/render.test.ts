@@ -72,10 +72,14 @@ describe("PNG rendering", () => {
 
   test("transparent background produces genuinely zero-alpha pixels", async () => {
     const stats = await inspectPng(await renderPng(DESIGNS["transparent"]!, TEST_DATA));
-    // Just over half the canvas is background for this design; assert a wide
-    // band rather than an exact count so antialiasing changes do not flake.
-    expect(stats.zeroAlpha).toBeGreaterThan(stats.total * 0.4);
-    expect(stats.zeroAlpha).toBeLessThan(stats.total * 0.7);
+    /* Roughly three quarters of the canvas is background for this design — the
+       quiet zone raised it from ~54% by shrinking the symbol inside a fixed
+       canvas. Assert a wide band rather than an exact count so antialiasing
+       changes do not flake, and assert the dark modules survived so an
+       all-transparent render cannot pass. */
+    expect(stats.zeroAlpha).toBeGreaterThan(stats.total * 0.6);
+    expect(stats.zeroAlpha).toBeLessThan(stats.total * 0.85);
+    expect(stats.opaque).toBeGreaterThan(stats.total * 0.1);
   });
 
   test("an opaque background produces no transparent pixels", async () => {

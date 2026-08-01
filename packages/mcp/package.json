@@ -1,6 +1,6 @@
 {
   "name": "@frontsail-ai/qr-mcp",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "MCP server that generates QR codes identical to qr-code-gen.frontsail.app",
   "keywords": [
     "mcp",

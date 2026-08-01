@@ -105,7 +105,7 @@ export function QRPreview({ qrType, formData, customization, onSave, onShare }: 
     >
       {/* Dimension annotation — drafting-style */}
       {!isEmpty && !error && (
-        <div className="hidden lg:flex w-[344px] items-center gap-2.5" aria-hidden>
+        <div className="hidden lg:flex w-[328px] items-center gap-2.5" aria-hidden>
           <span className="relative flex-1 h-px bg-[var(--ink-400)]">
             <span className="absolute left-0 -top-[3px] w-px h-[7px] bg-[var(--ink-400)]" />
           </span>
@@ -119,7 +119,7 @@ export function QRPreview({ qrType, formData, customization, onSave, onShare }: 
       {/* The sheet — the QR container stays mounted across states so the
           generation effect always has a live DOM node to append into */}
       <div
-        className={`bg-[var(--paper-card)] border-2 border-[var(--border-strong)] rounded-[2px] p-4 lg:p-8 shadow-[var(--shadow-md)] ${
+        className={`bg-[var(--paper-card)] border-2 border-[var(--border-strong)] rounded-[2px] p-3 lg:p-6 shadow-[var(--shadow-md)] ${
           isEmpty || error ? "hidden" : ""
         }`}
       >
@@ -131,7 +131,7 @@ export function QRPreview({ qrType, formData, customization, onSave, onShare }: 
         />
       </div>
       {isEmpty && (
-        <div className="w-[344px] max-w-full aspect-square bg-[color-mix(in_srgb,var(--paper-card)_65%,transparent)] border-[1.5px] border-dashed border-[var(--ink-300)] rounded-[2px] flex flex-col items-center justify-center gap-3 p-8 text-center">
+        <div className="w-[328px] max-w-full aspect-square bg-[color-mix(in_srgb,var(--paper-card)_65%,transparent)] border-[1.5px] border-dashed border-[var(--ink-300)] rounded-[2px] flex flex-col items-center justify-center gap-3 p-8 text-center">
           <ScanLine className="w-9 h-9 text-[var(--ink-300)]" aria-hidden />
           <div className="text-[15px] font-semibold text-[var(--text-primary)]">
             Nothing to encode yet
@@ -142,7 +142,7 @@ export function QRPreview({ qrType, formData, customization, onSave, onShare }: 
         </div>
       )}
       {!isEmpty && error && (
-        <div className="w-[344px] max-w-full aspect-square bg-[var(--signal-error-50)] border-[1.5px] border-dashed border-[var(--signal-error-500)] rounded-[2px] flex flex-col items-center justify-center gap-3 p-8 text-center">
+        <div className="w-[328px] max-w-full aspect-square bg-[var(--signal-error-50)] border-[1.5px] border-dashed border-[var(--signal-error-500)] rounded-[2px] flex flex-col items-center justify-center gap-3 p-8 text-center">
           <ScanLine className="w-9 h-9 text-[var(--signal-error-500)]" aria-hidden />
           <p className="text-[13px] text-[var(--ink-700)] leading-normal max-w-[240px]">
             {errorMessage}
@@ -165,7 +165,7 @@ export function QRPreview({ qrType, formData, customization, onSave, onShare }: 
 
       {/* Export — static block on desktop */}
       {isDesktop ? (
-        <div className="flex w-[344px] flex-col gap-2 mt-1.5">
+        <div className="flex w-[328px] flex-col gap-2 mt-1.5">
           <span className="font-mono text-[10px] tracking-[0.08em] uppercase text-[var(--text-muted)]">
             04 — Export
           </span>

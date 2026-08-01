@@ -519,11 +519,72 @@ test.describe("QR Code Generator", () => {
       // Click download (this should save the config)
       const downloadPromise = page.waitForEvent("download");
       await page.getByRole("button", { name: "Download PNG" }).click();
-      await downloadPromise;
+      const download = await downloadPromise;
 
       // Should now show the saved config
       await expect(page.getByText("No saved codes yet")).not.toBeVisible();
       await expect(page.getByRole("button", { name: "Restore" })).toBeVisible();
+
+      /* The exported file must carry a real quiet zone — ISO/IEC 18004 wants at
+         least 4 modules on every side. Measure it in the downloaded pixels
+         rather than inferring from the DOM: the preview and the export are
+         separate qr-code-styling instances, so only the file proves the file.
+
+         Decoding happens in the page because the browser already has a canvas;
+         the alternative is a native image dependency in the e2e package. */
+      const png = readFileSync(await download.path()).toString("base64");
+      const measured = await page.evaluate(async (base64) => {
+        const image = new Image();
+        await new Promise((resolve, reject) => {
+          image.onload = resolve;
+          image.onerror = reject;
+          image.src = `data:image/png;base64,${base64}`;
+        });
+        const canvas = document.createElement("canvas");
+        canvas.width = image.width;
+        canvas.height = image.height;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(image, 0, 0);
+        const { data } = ctx.getImageData(0, 0, image.width, image.height);
+        const isDark = (x, y) => {
+          const i = (y * image.width + x) * 4;
+          return data[i + 3] > 128 && data[i] < 128;
+        };
+
+        // Bounding box of the inked modules; the inset is the quiet zone.
+        let top = -1;
+        let left = image.width;
+        for (let y = 0; y < image.height && top < 0; y++) {
+          for (let x = 0; x < image.width; x++) {
+            if (isDark(x, y)) {
+              top = y;
+              break;
+            }
+          }
+        }
+        for (let y = 0; y < image.height; y++) {
+          for (let x = 0; x < left; x++) {
+            if (isDark(x, y)) {
+              left = x;
+              break;
+            }
+          }
+        }
+
+        /* The top-left finder pattern's first row is a solid run of exactly 7
+           modules, which gives the module size without knowing the version. */
+        let run = 0;
+        for (let x = left; x < image.width && isDark(x, top); x++) run++;
+
+        return { top, left, run, width: image.width, module: run / 7 };
+      }, png);
+
+      expect(measured.module).toBeGreaterThan(0);
+      const quietModules = Math.min(measured.top, measured.left) / measured.module;
+      expect(
+        quietModules,
+        `exported PNG has ${quietModules.toFixed(2)} modules of quiet zone (needs >= 4)`,
+      ).toBeGreaterThanOrEqual(4);
     });
 
     test("should save configuration when downloading SVG", async ({ page }) => {

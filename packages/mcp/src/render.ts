@@ -1,5 +1,5 @@
 import type { Customization } from "@frontsail/qr-core";
-import { mapOptionsToQRConfig } from "@frontsail/qr-core";
+import { mapOptionsToQRConfig, quietZoneMargin } from "@frontsail/qr-core";
 import * as napiCanvas from "@napi-rs/canvas";
 import { Resvg } from "@resvg/resvg-js";
 import { JSDOM } from "jsdom";
@@ -55,7 +55,7 @@ export async function renderRawSvg(
 
   let qr: QRCodeStyling;
   try {
-    qr = new QRCodeStyling({
+    const base = {
       jsdom: JSDOM,
       nodeCanvas,
       width: size,
@@ -63,6 +63,23 @@ export async function renderRawSvg(
       type: "svg",
       data,
       ...mapOptionsToQRConfig(customization),
+    };
+    /* Two passes: the symbol's module count is only known once the matrix is
+       built, but the margin has to be passed to the constructor. See
+       quietZoneMargin — ISO/IEC 18004 wants 4 modules of clear space, and the
+       library supplies none by default. A bare construction is ~3ms.
+
+       `_qr` is private; when it disappears, quietZoneMargin falls back to a
+       ratio safe at every version rather than shipping no quiet zone. */
+    const probe = new QRCodeStyling(base as ConstructorParameters<typeof QRCodeStyling>[0]);
+    const moduleCount =
+      typeof (probe as unknown as { _qr?: { getModuleCount?: () => number } })._qr
+        ?.getModuleCount === "function"
+        ? (probe as unknown as { _qr: { getModuleCount: () => number } })._qr.getModuleCount()
+        : null;
+    qr = new QRCodeStyling({
+      ...base,
+      margin: quietZoneMargin(moduleCount, size),
     } as ConstructorParameters<typeof QRCodeStyling>[0]);
   } catch (err) {
     // The constructor builds the QR matrix, and throws a bare string (not an

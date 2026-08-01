@@ -16,7 +16,7 @@ Get this straight before advising anyone, because the usual QR advice assumes co
 **You do not control:**
 
 - **Error-correction level.** Fixed at Q (~25% recoverable). There is no parameter for it — not in the MCP tools, not in the web app. Never advise "raise it to H to pay for the logo"; it cannot be done here. Recommend shorter content, a bigger code, a real quiet zone, darker modules or a smaller logo instead.
-- **Quiet zone.** Exports contain no reliable margin (see the traps below). You add it when placing the code; the generator will not.
+- **Quiet zone width.** Fixed at the 4 modules the standard requires. It is always present and always painted in the background colour; there is no parameter to widen or remove it.
 - **Logo size.** Fixed at the default footprint, about 10% of the dark modules.
 
 ## 1. Pick the content type
@@ -41,7 +41,7 @@ Keep payloads short. Length drives the symbol version: more characters means mor
 
 These are the failures that do not show up in the file you get back.
 
-**Quiet zone — the big one.** The standard requires at least 4 empty modules on all four sides. **Exports from this toolchain contain no reliable quiet zone**: measured, they carry 0.18 modules for short content and up to 6 for near-capacity content, purely as rounding slack. The web app's preview looks fine because the card padding around it supplies the margin on screen — the file does not have it. So whenever you place an exported QR, add white space around it yourself, at least the width of four modules (roughly 15% of the code's width). Dropping a bare export straight onto a photo or a coloured panel is the most common way to make a working code unreadable.
+**Quiet zone — handled, but check what produced the file.** The standard requires at least 4 empty modules on all four sides. **Current exports include it**, painted in the background colour, so a file from this toolchain can be placed directly without adding margin. Older files cannot: before `@frontsail-ai/qr-mcp` 0.2.0 the exports carried 0.18 modules for short content — effectively none — because the margin was integer-rounding slack rather than a design decision. If you are handed an existing QR image from anywhere else, measure before trusting it, and add clear space of at least four modules if it is missing. A missing quiet zone is the most common way a working code becomes unreadable once it is placed on a photo or a coloured panel.
 
 **Transparent backgrounds inherit the surface.** A transparent export has no background of its own, so whatever it lands on becomes the light module. Measured: the same file decodes on white, light grey and mid grey, and fails on a near-black surface. Only choose a transparent background when you know the destination surface is light, and say so when you hand the file over. When in doubt, use an opaque background — it is immune to whatever sits underneath.
 
