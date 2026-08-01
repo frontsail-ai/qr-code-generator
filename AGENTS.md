@@ -17,7 +17,7 @@ Bun workspace monorepo:
 
 - `apps/web` — the deployed app. React components, hooks, `index.html`, `public/`, and the Playwright suite.
 - `packages/core` — `@frontsail/qr-core`: types, presets, data formatters, the qr-code-styling option mapping, and the share-link codec, plus their vitest units. Consumed as raw TypeScript source (`"exports": {".": "./src/index.ts"}`), so there is no build step.
-- `packages/mcp` — `@frontsail/qr-mcp`: the stdio MCP server that renders QR codes for agents. The only publishable package.
+- `packages/mcp` — `@frontsail-ai/qr-mcp`: the stdio MCP server that renders QR codes for agents. The only publishable package.
 - `tools/*` — reserved in the workspace globs; empty for now.
 
 Rules for `packages/core`: it must stay framework-free and render nothing. Its tsconfig omits the DOM lib, so `window`/`document`/`localStorage` are type errors — pass browser values in as parameters instead (see `encodeDesignToUrl`). Its only dependency is `lz-string`. React-flavored types belong in `apps/web/src/types.ts`.

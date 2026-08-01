@@ -1,5 +1,5 @@
 {
-  "name": "@frontsail/qr-mcp",
+  "name": "@frontsail-ai/qr-mcp",
   "version": "0.1.0",
   "description": "MCP server that generates QR codes identical to qr-code-gen.frontsail.app",
   "keywords": [
@@ -20,7 +20,7 @@
     "directory": "packages/mcp"
   },
   "bin": {
-    "qr-mcp": "./dist/index.mjs"
+    "qr-mcp": "dist/index.mjs"
   },
   "files": [
     "dist",
@@ -36,7 +36,6 @@
   },
   "scripts": {
     "build": "vp pack",
-    "_comment_test": "packs first: the stdio integration test drives dist/, which is what npx runs",
     "test": "vp pack && vp test --run",
     "check": "vp check"
   },
