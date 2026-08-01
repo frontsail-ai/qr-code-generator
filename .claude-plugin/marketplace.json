@@ -1,0 +1,15 @@
+{
+  "name": "frontsail-qr",
+  "description": "The FrontSail QR code generator: scannability guidance for agents, plus the generation toolchain behind qr-code-gen.frontsail.app.",
+  "owner": {
+    "name": "FrontSail AI",
+    "email": "hello@frontsail.ai"
+  },
+  "plugins": [
+    {
+      "name": "qr-code-generator",
+      "source": "./skills/qr-code",
+      "description": "Design QR codes that actually scan — scannability rules, styling safety rails, and generation via the qr-code-gen.frontsail.app toolchain"
+    }
+  ]
+}

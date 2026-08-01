@@ -1,0 +1,9 @@
+{
+  "name": "qr-code-generator",
+  "description": "Design QR codes that actually scan — scannability rules, styling safety rails, and generation via the qr-code-gen.frontsail.app toolchain",
+  "version": "0.1.0",
+  "author": { "name": "FrontSail AI" },
+  "homepage": "https://qr-code-gen.frontsail.app/",
+  "repository": "https://github.com/frontsail-ai/qr-code-generator",
+  "license": "MIT"
+}

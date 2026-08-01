@@ -18,9 +18,17 @@ Bun workspace monorepo:
 - `apps/web` — the deployed app. React components, hooks, `index.html`, `public/`, and the Playwright suite.
 - `packages/core` — `@frontsail/qr-core`: types, presets, data formatters, the qr-code-styling option mapping, and the share-link codec, plus their vitest units. Consumed as raw TypeScript source (`"exports": {".": "./src/index.ts"}`), so there is no build step.
 - `packages/mcp` — `@frontsail-ai/qr-mcp`: the stdio MCP server that renders QR codes for agents. The only publishable package.
+- `skills/qr-code` — the QR scannability skill, distributed as a Claude Code plugin. Not a workspace package.
 - `tools/*` — reserved in the workspace globs; empty for now.
 
 Rules for `packages/core`: it must stay framework-free and render nothing. Its tsconfig omits the DOM lib, so `window`/`document`/`localStorage` are type errors — pass browser values in as parameters instead (see `encodeDesignToUrl`). Its only dependency is `lz-string`. React-flavored types belong in `apps/web/src/types.ts`.
+
+Rules for `skills/`:
+
+- **The plugin root is `skills/qr-code/`, not the repo root.** `.claude-plugin/marketplace.json` at the repo root points `source` at `./skills/qr-code`, which holds its own `.claude-plugin/plugin.json` and `SKILL.md` (the documented single-skill-at-plugin-root form). Pointing `source` at `"./"` also works and installs the whole monorepo — 345 MB, because the root `package.json` makes the installer run a dependency install. Keep the plugin root free of `package.json`.
+- **Every scannability claim in `SKILL.md` is cited or measured.** The measurements come from `packages/mcp/tests/scannability.test.ts`; the evidence table is in `docs/plans/2026-08-01-qr-skill.md`. Do not add a claim to the skill without adding its evidence, and if a threshold in that test moves, update the skill.
+- **The skill must agree with the MCP tool descriptions.** They ship to the same audience; a contradiction between them is worse than either being silent.
+- Run `claude plugin validate . --strict` after touching either manifest.
 
 Rules for `packages/mcp` — each of these was learned by watching a plausible-looking but wrong file get produced, so treat them as invariants rather than preferences:
 

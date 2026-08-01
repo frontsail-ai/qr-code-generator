@@ -38,6 +38,16 @@ apps/
   web/        the deployed app (React, Vite+, Playwright e2e)
 packages/
   core/       @frontsail/qr-core — framework-free QR logic + vitest units
+  mcp/        @frontsail-ai/qr-mcp — stdio MCP server for agents
+skills/
+  qr-code/    QR scannability skill, distributed as a Claude Code plugin
+```
+
+Agents can use this project two ways. The MCP server generates codes (`claude mcp add qr -- npx -y @frontsail-ai/qr-mcp`); the skill teaches an agent which designs will actually scan:
+
+```bash
+claude plugin marketplace add frontsail-ai/qr-code-generator
+claude plugin install qr-code-generator@frontsail-qr
 ```
 
 `packages/core` holds the parts that have nothing to do with React: types,
