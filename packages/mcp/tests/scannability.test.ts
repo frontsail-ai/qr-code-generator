@@ -1,5 +1,5 @@
 import type { Customization, DotType } from "@frontsail/qr-core";
-import { DEFAULT_CUSTOMIZATION, TRANSPARENT } from "@frontsail/qr-core";
+import { DEFAULT_CUSTOMIZATION, QUIET_ZONE_MODULES, TRANSPARENT } from "@frontsail/qr-core";
 import { createCanvas, loadImage } from "@napi-rs/canvas";
 import { Resvg } from "@resvg/resvg-js";
 import jsQR from "jsqr";
@@ -236,7 +236,7 @@ describe("physical size and dot style", () => {
     const floors: Record<string, number | null> = {};
     for (const dotType of styles) {
       let smallest: number | null = null;
-      for (const width of [60, 50, 45, 40, 36, 32, 28, 24, 20]) {
+      for (const width of [160, 140, 120, 100, 90, 80, 72, 66, 60, 55, 50]) {
         if (await decodes(await rasterize(design({ dotType }), CONTENT, width))) smallest = width;
         else break;
       }
@@ -255,11 +255,12 @@ describe("physical size and dot style", () => {
 });
 
 describe("quiet zone", () => {
-  /* Exports carry no quiet zone: qr-code-styling's `margin` defaults to 0 and
-     neither core nor this package sets it. Whatever margin appears is integer
-     rounding slack from fitting N modules into a fixed pixel box, so it varies
-     with content length and cannot be relied on. */
-  async function marginInModules(content: string) {
+  /* ISO/IEC 18004 requires at least 4 modules of clear space on every side.
+     Before the quiet-zone fix these renders carried 0.18 modules for short
+     content — the library supplies none and whatever appeared was integer
+     rounding slack, which vanishes exactly in the common case of a short URL.
+     Now the margin is computed per render; see packages/core/src/quietZone.ts. */
+  async function quietZoneInModules(content: string) {
     const svg = await renderSvg(design(), content);
     const rects = [...svg.matchAll(/<rect x="([\d.]+)" y="[\d.]+" width="([\d.]+)"/g)].map((m) => ({
       x: Number(m[1]),
@@ -269,14 +270,54 @@ describe("quiet zone", () => {
     return Math.min(...rects.filter((r) => r.w === module).map((r) => r.x)) / module;
   }
 
-  test("the margin is rounding slack, not a designed quiet zone", async () => {
-    const short = await marginInModules(CONTENT);
-    const long = await marginInModules(CONTENT_LONG);
-    console.log(
-      `[quiet-zone] short content ${short.toFixed(2)} modules, ` +
-        `near-capacity ${long.toFixed(2)} modules — the spec requires 4`,
-    );
-    expect(short).toBeLessThan(1); // the common case gets essentially none
-    expect(Math.abs(long - short)).toBeGreaterThan(0.5); // and it is not stable
+  test("every payload size renders at least the required 4 modules", async () => {
+    const payloads: Array<[string, string]> = [
+      ["short URL", CONTENT],
+      ["50 chars", "x".repeat(50)],
+      ["100 chars", "x".repeat(100)],
+      ["near-capacity", CONTENT_LONG],
+      ["700 chars", "x".repeat(700)],
+    ];
+    for (const [label, content] of payloads) {
+      const quiet = await quietZoneInModules(content);
+      console.log(`[quiet-zone] ${label.padEnd(14)} ${quiet.toFixed(2)} modules`);
+      expect(quiet, `${label} rendered ${quiet.toFixed(2)} modules`).toBeGreaterThanOrEqual(
+        QUIET_ZONE_MODULES,
+      );
+    }
+  });
+
+  test("the quiet zone is filled with the background colour", async () => {
+    const png = await rasterize(design({ backgroundColor: "#FFFFFF" }), CONTENT, 560);
+    const image = await loadImage(png);
+    const canvas = createCanvas(image.width, image.height);
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(image, 0, 0);
+    const { data } = ctx.getImageData(0, 0, image.width, image.height);
+    const at = (x: number, y: number) => {
+      const i = (y * image.width + x) * 4;
+      return [data[i]!, data[i + 1]!, data[i + 2]!, data[i + 3]!];
+    };
+    // Corners and edge midpoints all sit inside the quiet zone.
+    for (const [x, y] of [
+      [4, 4],
+      [image.width - 5, 4],
+      [4, image.height - 5],
+      [Math.floor(image.width / 2), 4],
+    ]) {
+      expect(at(x, y)).toEqual([255, 255, 255, 255]);
+    }
+  });
+
+  test("a transparent background leaves the quiet zone transparent", async () => {
+    const png = await rasterize(design({ backgroundColor: TRANSPARENT }), CONTENT, 560);
+    const image = await loadImage(png);
+    const canvas = createCanvas(image.width, image.height);
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(image, 0, 0);
+    const { data } = ctx.getImageData(0, 0, image.width, image.height);
+    const alphaAt = (x: number, y: number) => data[(y * image.width + x) * 4 + 3]!;
+    expect(alphaAt(4, 4)).toBe(0);
+    expect(alphaAt(Math.floor(image.width / 2), 4)).toBe(0);
   });
 });

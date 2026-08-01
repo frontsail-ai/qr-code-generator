@@ -30,7 +30,7 @@ Rules for `skills/`:
 - **The skill must agree with the MCP tool descriptions.** They ship to the same audience; a contradiction between them is worse than either being silent.
 - Run `claude plugin validate . --strict` after touching either manifest.
 
-Rules for `packages/mcp` — each of these was learned by watching a plausible-looking but wrong file get produced, so treat them as invariants rather than preferences:
+Rules for `packages/mcp` — each of these was learned by watching a plausible-looking but wrong file get produced, so treat them as invariants rather than preferences. Plausible output, not loud failure, is this project's characteristic bug: the defences that have actually caught things here are pixel-level assertions on decoded output, reading `npm publish --dry-run` warnings instead of skimming past them, and pointing a real agent at the result rather than trusting integration tests.
 
 - **Core is bundled, not depended on.** `@frontsail/qr-core` sits in `devDependencies` precisely so `vp pack` inlines it (with `lz-string`) into `dist/index.mjs`. Moving it to `dependencies` would publish an import of a private package that no consumer can resolve. Core's raw TypeScript is not loadable by plain Node either way.
 - **The library's own canvas/PNG path is forbidden.** Never `type: "canvas"` + `getRawData("png")`: it silently drops logos with node-canvas 2 and paints solid squares with the napi canvas. PNG is always resvg rasterizing the sanitized SVG.

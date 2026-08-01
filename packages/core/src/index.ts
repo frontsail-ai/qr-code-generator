@@ -12,6 +12,7 @@ export {
   TRANSPARENT,
 } from "./constants";
 export { buildGradient, mapOptionsToQRConfig } from "./qrConfig";
+export { QUIET_ZONE_MODULES, quietZoneMargin } from "./quietZone";
 export { formatQRData } from "./qrDataFormatters";
 export { decodeDesignFromUrl, encodeDesignToUrl } from "./shareUrl";
 export type {

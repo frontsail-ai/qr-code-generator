@@ -65,7 +65,7 @@ Takes the same design inputs and returns a `qr-code-gen.frontsail.app` link that
 
 ## Releasing
 
-From `packages/mcp`:
+From `packages/mcp`, **on a checkout of merged `master`**. `npm publish` packs whatever `dist/` currently holds, and `dist/` is built from the working tree — so publishing from a feature branch ships unreviewed code under a released version number. Confirm with `git status` and `git log --oneline -1` before step 1; a released version is immutable, so this cannot be corrected in place.
 
 1. **Bump the version in two places** — `package.json` and `SERVER_VERSION` in `src/server.ts`. They are separate constants today; the version an MCP client sees in the handshake comes from the latter.
 2. `vp run test` from the repo root — the package's test script packs first, so this also proves the build.
