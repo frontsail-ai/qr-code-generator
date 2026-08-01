@@ -52,12 +52,27 @@ export const customizationSchema = z
     foreground_color_2: hexColor
       .optional()
       .describe("Second gradient stop. Only used when gradient_type is not 'none'."),
-    gradient_type: z.enum(GRADIENT_VALUES).optional().describe("Foreground gradient direction."),
+    gradient_type: z
+      .enum(GRADIENT_VALUES)
+      .optional()
+      .describe(
+        "Foreground gradient. Anything other than 'none' also uses foreground_color_2, which " +
+          "falls back to its default if you do not set it. Heads-up on the two linear values: " +
+          "their names are rotated relative to what actually renders — 'linear-bl-tr' renders " +
+          "top-left to bottom-right, and 'linear-tl-br' renders top-right to bottom-left. The " +
+          "names are kept because they are encoded in existing share links.",
+      ),
     background_color: backgroundColor
       .optional()
       .describe(`Background color, or "${TRANSPARENT}" for a transparent backdrop.`),
     dot_type: z.enum(DOT_TYPE_VALUES).optional().describe("Shape of the QR dots."),
-    corner_square_type: z.enum(CORNER_SQUARE_VALUES).optional().describe("Finder-square shape."),
+    corner_square_type: z
+      .enum(CORNER_SQUARE_VALUES)
+      .optional()
+      .describe(
+        "Finder-square shape. Note 'extra-rounded' is the value the web app's picker labels " +
+          "simply 'Rounded'; there is no separate 'rounded' value for corner squares.",
+      ),
     corner_dot_type: z.enum(CORNER_DOT_VALUES).optional().describe("Finder-dot shape."),
     logo: z
       .string()
