@@ -1,0 +1,175 @@
+name: Release MCP
+
+# Publishes @frontsail-ai/qr-mcp when a qr-mcp-v* tag is pushed.
+#
+# No npm token exists anywhere in this repo. Authentication is npm Trusted
+# Publishing: GitHub mints a short-lived OIDC token for this workflow, and npm
+# accepts it because the package's trusted publisher is registered as
+# (this repo, this filename). Renaming this file breaks publishing until the
+# registration on npmjs.com is updated to match.
+#
+# Everything the RELEASING checklist used to ask a human to remember is a gate
+# here: the tag must be on master, the three version strings must agree, the
+# packed artifact must pass its own tests, and the dry-run must be free of
+# warnings. Each one exists because it was nearly missed once.
+
+on:
+  push:
+    tags: ["qr-mcp-v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing qr-mcp-v* tag to rehearse. Runs every gate, publishes nothing."
+        required: true
+
+permissions:
+  contents: read
+  id-token: write # required for the OIDC exchange; without it npm falls back to a token and fails
+
+jobs:
+  release:
+    runs-on: ubuntu-latest # GitHub-hosted only — trusted publishing rejects self-hosted runners
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+          fetch-depth: 0 # full history, so the master-ancestry check below can resolve
+
+      - name: Verify the tag is on master
+        run: |
+          TAG="${{ github.event.inputs.tag || github.ref_name }}"
+          echo "tag: $TAG"
+          git fetch --quiet origin master
+          SHA=$(git rev-list -n1 "$TAG")
+          echo "commit: $SHA"
+          if ! git merge-base --is-ancestor "$SHA" origin/master; then
+            echo "::error::$TAG points at $SHA, which is not reachable from master."
+            echo "::error::Publishing from an unmerged commit ships unreviewed code under an immutable version."
+            exit 1
+          fi
+          echo "$SHA is on master"
+
+      - name: Verify the tag, package.json and SERVER_VERSION agree
+        run: |
+          TAG="${{ github.event.inputs.tag || github.ref_name }}"
+          TAG_VERSION="${TAG#qr-mcp-v}"
+          PKG_VERSION=$(node -p "require('./packages/mcp/package.json').version")
+          SRV_VERSION=$(node -p "
+            const s = require('fs').readFileSync('packages/mcp/src/server.ts', 'utf8');
+            (s.match(/SERVER_VERSION\s*=\s*\"([^\"]+)\"/) || [])[1] ?? 'MISSING'
+          ")
+          echo "tag=$TAG_VERSION package.json=$PKG_VERSION SERVER_VERSION=$SRV_VERSION"
+          if [ "$TAG_VERSION" != "$PKG_VERSION" ] || [ "$TAG_VERSION" != "$SRV_VERSION" ]; then
+            echo "::error::Version mismatch. The handshake version an MCP client sees comes from"
+            echo "::error::SERVER_VERSION, so a drifting one ships a package that lies about itself."
+            exit 1
+          fi
+
+      # npm's trusted publishing needs npm >= 11.5.1, which ships with Node 24.
+      # registry-url writes the .npmrc npm reads during the OIDC exchange, and
+      # package-manager-cache is off because a release should resolve fresh.
+      - name: Setup Node for publishing
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24.x"
+          registry-url: "https://registry.npmjs.org"
+          package-manager-cache: false
+
+      - name: Setup Vite+
+        uses: voidzero-dev/setup-vp@v1
+        with:
+          node-version: "24"
+          cache: true
+
+      - name: Verify the toolchain can do trusted publishing
+        run: |
+          echo "node: $(node --version)"
+          echo "npm:  $(npm --version)"
+          node -e '
+            const [maj, min, patch] = process.versions.node.split(".").map(Number);
+            if (maj < 22 || (maj === 22 && (min < 14))) {
+              console.error("::error::Node >= 22.14.0 required for trusted publishing");
+              process.exit(1);
+            }
+          '
+          NPM_VERSION=$(npm --version)
+          node -e '
+            const need = [11, 5, 1];
+            const got = process.argv[1].split(".").map(Number);
+            for (let i = 0; i < 3; i++) {
+              if ((got[i] ?? 0) > need[i]) break;
+              if ((got[i] ?? 0) < need[i]) {
+                console.error(`::error::npm >= 11.5.1 required for trusted publishing, got ${process.argv[1]}`);
+                process.exit(1);
+              }
+            }
+          ' "$NPM_VERSION"
+
+      - name: Install dependencies
+        run: vp install --frozen-lockfile
+
+      # The package's test script packs first, so this exercises the built
+      # dist/ that will be published — including the stdio integration test that
+      # drives the real binary.
+      - name: Test the packed artifact
+        run: vp run '@frontsail-ai/qr-mcp#test'
+
+      # npm silently drops malformed fields rather than failing. A "bin[qr-mcp]
+      # script name ... was invalid and removed" warning is exactly how 0.1.0
+      # nearly shipped with a bin that npx could not run, while the local
+      # tarball looked fine. Any warning is a hard stop.
+      - name: Dry-run and reject any npm warning
+        working-directory: packages/mcp
+        run: |
+          set -o pipefail
+          npm publish --dry-run --access public 2>&1 | tee /tmp/dry-run.log
+          if grep -q "npm warn" /tmp/dry-run.log; then
+            echo "::error::npm emitted warnings during the dry run. It corrects malformed"
+            echo "::error::fields silently on publish, so a warning here means the published"
+            echo "::error::package would differ from the one just tested."
+            grep "npm warn" /tmp/dry-run.log
+            exit 1
+          fi
+          echo "dry run clean"
+
+      # No token, and no --provenance flag: trusted publishing authenticates via
+      # the OIDC token minted by the id-token permission above, and generates
+      # provenance attestations automatically.
+      - name: Publish to npm
+        if: github.event_name == 'push'
+        working-directory: packages/mcp
+        run: npm publish --access public
+
+      - name: Smoke-test the published version
+        if: github.event_name == 'push'
+        run: |
+          TAG="${{ github.ref_name }}"
+          VERSION="${TAG#qr-mcp-v}"
+          echo "waiting for $VERSION to appear on the registry"
+          for _ in $(seq 1 30); do
+            PUBLISHED=$(npm view "@frontsail-ai/qr-mcp@$VERSION" version 2>/dev/null || true)
+            [ "$PUBLISHED" = "$VERSION" ] && break
+            sleep 5
+          done
+          echo '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"ci-smoke","version":"1"}}}' \
+            | npx -y "@frontsail-ai/qr-mcp@$VERSION" > /tmp/handshake.json 2>/dev/null || true
+          cat /tmp/handshake.json
+          REPORTED=$(node -p "
+            try { JSON.parse(require('fs').readFileSync('/tmp/handshake.json','utf8')).result.serverInfo.version }
+            catch { 'UNPARSEABLE' }
+          ")
+          if [ "$REPORTED" != "$VERSION" ]; then
+            echo "::error::Published package reports version '$REPORTED', expected '$VERSION'."
+            exit 1
+          fi
+          echo "handshake reports $REPORTED"
+
+      - name: Rehearsal summary
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          echo "### Rehearsal complete — nothing published" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Every gate ran: master ancestry, version agreement, toolchain check," >> $GITHUB_STEP_SUMMARY
+          echo "packed-artifact tests, and a warning-free dry run." >> $GITHUB_STEP_SUMMARY
+          echo "Push a \`qr-mcp-v*\` tag to publish for real." >> $GITHUB_STEP_SUMMARY

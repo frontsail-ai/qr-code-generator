@@ -65,14 +65,47 @@ Takes the same design inputs and returns a `qr-code-gen.frontsail.app` link that
 
 ## Releasing
 
-From `packages/mcp`, **on a checkout of merged `master`**. `npm publish` packs whatever `dist/` currently holds, and `dist/` is built from the working tree — so publishing from a feature branch ships unreviewed code under a released version number. Confirm with `git status` and `git log --oneline -1` before step 1; a released version is immutable, so this cannot be corrected in place.
+Releases are published by [`.github/workflows/release-mcp.yml`](../../.github/workflows/release-mcp.yml) when a `qr-mcp-v*` tag is pushed. There is no npm token anywhere in this repo — the workflow authenticates with npm Trusted Publishing over GitHub OIDC, and npm generates provenance attestations automatically.
 
-1. **Bump the version in two places** — `package.json` and `SERVER_VERSION` in `src/server.ts`. They are separate constants today; the version an MCP client sees in the handshake comes from the latter.
-2. `vp run test` from the repo root — the package's test script packs first, so this also proves the build.
-3. `npm publish --dry-run --access public` and read the output. Confirm the file list is exactly `dist/index.mjs`, `README.md`, `package.json`, and that **no `npm warn publish` lines appear** — npm silently drops malformed fields rather than failing, and a stripped `bin` would break `npx` for everyone while the tarball still looks fine locally.
-4. `npm publish --access public`. The `--access public` is not optional: scoped packages default to restricted, and without it the first publish fails on a free account.
-5. Tag the release: `git tag qr-mcp-v<version> && git push origin qr-mcp-v<version>`.
-6. Smoke-test the real thing: `npx -y @frontsail-ai/qr-mcp` should start and speak MCP on stdio.
+1. **Bump the version in two places** — `package.json` and `SERVER_VERSION` in `src/server.ts`. The version an MCP client sees in the handshake comes from the constant, so a drifting one ships a package that misreports itself. A test pins them equal.
+2. **Merge it.** The workflow refuses to publish a tag whose commit is not reachable from `master`.
+3. **Tag and push:**
+   ```bash
+   git tag qr-mcp-v<version> && git push origin qr-mcp-v<version>
+   ```
+
+The workflow then verifies the tag is on `master`, checks the tag version against both constants, runs the package's tests against the packed artifact, rejects the release if the dry run emits any `npm warn`, publishes, and finally `npx`es the published version to confirm its handshake reports the right one. Every one of those gates exists because it was nearly missed by hand.
+
+To exercise the gates without publishing — after changing the workflow, for instance — run it from the Actions tab via **workflow_dispatch** with an existing tag. It runs everything and publishes nothing.
+
+### Trusted publisher registration
+
+One-time, on npmjs.com, under the package's **Settings → Trusted Publisher**. All fields are case-sensitive, and npm matches the workflow by **filename only**:
+
+| Field                | Value               |
+| -------------------- | ------------------- |
+| Organization or user | `frontsail-ai`      |
+| Repository           | `qr-code-generator` |
+| Workflow filename    | `release-mcp.yml`   |
+| Environment          | _(leave empty)_     |
+
+Renaming or moving the workflow file breaks publishing until this registration is updated to match.
+
+### Manual fallback
+
+Only for registry emergencies — a broken OIDC exchange, or a release that cannot wait on GitHub Actions. It bypasses every gate above, so re-read them and check by hand.
+
+From `packages/mcp`, on a checkout of merged `master` (`npm publish` packs whatever `dist/` currently holds, so a feature-branch publish ships unreviewed code under an immutable version):
+
+```bash
+vp run test                                   # packs, then tests the packed artifact
+npm publish --dry-run --access public         # must emit no `npm warn` lines
+npm publish --access public --otp=<code>      # auth-and-writes 2FA requires a fresh code
+git tag qr-mcp-v<version> && git push origin qr-mcp-v<version>
+npx -y @frontsail-ai/qr-mcp@<version>         # handshake must report <version>
+```
+
+`--access public` is not optional for a scoped package, and `--otp` is what makes an unattended publish possible at all — without it npm falls back to a browser flow that needs a terminal.
 
 ## License
 
