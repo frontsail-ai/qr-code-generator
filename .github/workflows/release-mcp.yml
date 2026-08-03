@@ -122,14 +122,38 @@ jobs:
       - name: Dry-run and reject any npm warning
         working-directory: packages/mcp
         run: |
-          set -o pipefail
-          npm publish --dry-run --access public 2>&1 | tee /tmp/dry-run.log
+          # The dry run may exit non-zero for a reason that is fine during a
+          # rehearsal, so capture the status rather than letting `bash -e` end
+          # the step before the output has been inspected.
+          set +e
+          npm publish --dry-run --access public > /tmp/dry-run.log 2>&1
+          STATUS=$?
+          set -e
+          cat /tmp/dry-run.log
+
+          # Always fatal, on every trigger. npm corrects malformed fields
+          # silently on publish, so a warning here means the published package
+          # would differ from the one just tested.
           if grep -q "npm warn" /tmp/dry-run.log; then
-            echo "::error::npm emitted warnings during the dry run. It corrects malformed"
-            echo "::error::fields silently on publish, so a warning here means the published"
-            echo "::error::package would differ from the one just tested."
+            echo "::error::npm emitted warnings during the dry run."
             grep "npm warn" /tmp/dry-run.log
             exit 1
+          fi
+
+          if [ "$STATUS" -ne 0 ]; then
+            # `npm publish --dry-run` still asks the registry, so rehearsing an
+            # already-published tag always fails here. That is the normal case
+            # for a rehearsal — you rehearse with a tag that shipped. Packing
+            # finishes before the registry check, so the file list and the
+            # warning check above have already done their work.
+            if [ "${{ github.event_name }}" = "workflow_dispatch" ] &&
+               grep -q "cannot publish over the previously published" /tmp/dry-run.log; then
+              echo "Rehearsal: $(grep -m1 'cannot publish over' /tmp/dry-run.log)"
+              echo "Expected when rehearsing a tag that is already on the registry."
+            else
+              echo "::error::npm publish --dry-run failed (exit $STATUS)."
+              exit 1
+            fi
           fi
           echo "dry run clean"
 
