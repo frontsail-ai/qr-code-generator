@@ -1,6 +1,6 @@
 # MCP release automation blueprint
 
-**Date:** 2026-08-02 · **Status:** proposed · **Scope:** one PR, CI config only, no product code
+**Date:** 2026-08-02 · **Status:** implemented ([PR #19](https://github.com/frontsail-ai/qr-code-generator/pull/19)) · **Scope:** CI config only, no product code
 
 Publishing `@frontsail-ai/qr-mcp` becomes a tag push. No npm token exists in the repo, and the RELEASING checklist's rules become workflow gates instead of things a human has to remember.
 
@@ -52,3 +52,43 @@ Automating the version bump. Publishing the plugin/skill (it distributes from th
 - **The registration is manual and case-sensitive.** Until the user completes it on npmjs.com, the publish leg cannot work; the rehearsal leg proves everything else.
 - **Renaming this workflow file breaks publishing** — npm matches on filename. Noted in a comment at the top of the file.
 - **A tag pushed to a non-master commit fails loudly** rather than publishing. That is the intent, but it will surprise someone eventually.
+
+## Outcome (2026-08-03, post-implementation)
+
+Every gate is now proven on a real runner. The rehearsal
+([run 30777515416](https://github.com/frontsail-ai/qr-code-generator/actions/runs/30777515416))
+passed end to end against `qr-mcp-v0.2.0`:
+
+| Gate                                  | Result                                                                      |
+| ------------------------------------- | --------------------------------------------------------------------------- |
+| Tag reachable from master             | pass — `02180ca…` confirmed on master                                       |
+| Tag == package.json == SERVER_VERSION | pass — `tag=0.2.0 package.json=0.2.0 SERVER_VERSION=0.2.0`                  |
+| Toolchain floors                      | pass — Node v24.18.1, npm 11.16.0, both above the 22.14.0 / 11.5.1 minimums |
+| Packed artifact tests                 | pass                                                                        |
+| Warning-free dry run                  | pass — `dry run clean`                                                      |
+| Publish / smoke                       | **skipped**, as intended for a rehearsal                                    |
+
+`@frontsail-ai/qr-mcp@0.2.0`'s registry timestamp was identical before and after
+(`2026-08-02T19:59:41.296Z`), confirming the rehearsal published nothing.
+
+Two things the first rehearsal exposed:
+
+1. **The dry-run gate was fatal about the wrong thing.** It failed with zero npm warnings —
+   `npm publish --dry-run` itself exits non-zero with "You cannot publish over the previously
+   published versions" because it still consults the registry. Since a rehearsal necessarily uses a
+   tag that has already shipped, the gate could never pass in rehearsal mode. Fixed by capturing the
+   exit status, keeping any `npm warn` fatal on every trigger, and tolerating only that one message
+   only on `workflow_dispatch`. Packing completes before the registry check, so the file list and the
+   warning scan still run.
+2. **The predicted failure did not happen.** The blueprint flagged the two-Node-installs interaction
+   as the likeliest breakage. `setup-node` and `setup-vp` compose without conflict — the runner
+   reported Node v24.18.1 and npm 11.16.0 after both, comfortably above the trusted-publishing
+   floors. The explicit assert step was still worth having: it turned an assumption into a printed
+   fact.
+
+Also confirmed: npm's 2FA-deprecation banner is an `npm notice`, not an `npm warn`, so it does not
+trip the warning gate on a real release.
+
+**Still outstanding:** the publish leg cannot run until the trusted publisher is registered on
+npmjs.com (values in the package README). Until then a tag push will pass every gate and fail at the
+OIDC exchange.
