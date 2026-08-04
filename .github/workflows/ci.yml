@@ -21,7 +21,7 @@ jobs:
           cache: true
 
       - name: Install just
-        uses: extractions/setup-just@v2
+        uses: extractions/setup-just@v4
 
       - name: Install dependencies
         run: vp install --frozen-lockfile
