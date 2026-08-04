@@ -38,6 +38,7 @@ Rules for `packages/mcp` — each of these was learned by watching a plausible-l
 - **`nodeCanvas` is always passed, and every `getRawData` call keeps its timeout.** Without a canvas implementation the logo path returns a promise that never settles — a tool call that hangs forever, which is worse for an agent than any error.
 - **Sanitize on the PNG path only.** The `url('#id')` → `url(#id)` rewrite is what makes resvg work, but it changes bytes; applying it to returned SVG would break byte-parity with the web app, which `tests/parity.test.ts` guards using SVGs captured from the live site.
 - Test fixtures must be real-world PNGs. resvg decodes node-canvas-2-encoded PNGs as black, so a fixture built that way would fail for reasons unrelated to the code.
+- **A Dependabot bump that reddens the golden or parity tests is the system working, not flakiness.** `qr-code-styling`, `@resvg/resvg-js` and `@napi-rs/canvas` all decide what gets rendered, so a failure there means that bump changed the output. Read the pixels and decide whether the new rendering is acceptable _before_ touching a golden. Regenerating first converts a detection into a silent acceptance, which is precisely the failure mode every other rule in this section exists to prevent.
 
 ## Tech stack
 
