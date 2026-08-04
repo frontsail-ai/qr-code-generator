@@ -46,7 +46,7 @@
     },
     "packages/mcp": {
       "name": "@frontsail-ai/qr-mcp",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "bin": {
         "qr-mcp": "dist/index.mjs",
       },
