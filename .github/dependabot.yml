@@ -52,3 +52,14 @@ updates:
       # ignores do not cover aliases — close it as mislabelled (see #28 for the
       # wording) and treat this comment as the standing explanation.
       - dependency-name: "vite"
+
+      # zod 4 does not typecheck against @modelcontextprotocol/sdk. The SDK
+      # declares `zod: "^3.25 || ^4.0"` as both dependency and peer, but its
+      # zod-compat types reject zod 4's `$strip` object schemas: `registerTool`'s
+      # inputSchema fails to match `AnySchema`, and the tool callback's argument
+      # silently degrades to `any` (see #29). SDK 1.30.0 is the latest published
+      # release, so there is nowhere to upgrade to that fixes it.
+      #
+      # Drop this entry once the SDK ships a release that accepts zod 4 schemas.
+      - dependency-name: "zod"
+        update-types: ["version-update:semver-major"]
