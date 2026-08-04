@@ -45,7 +45,7 @@
     "@resvg/resvg-js": "^2.6.2",
     "jsdom": "^30.0.1",
     "qr-code-styling": "^1.9.2",
-    "zod": "^3.25.76"
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@frontsail/qr-core": "workspace:*",
