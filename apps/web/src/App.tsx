@@ -1,5 +1,6 @@
 import { Check, ImagePlus, Link as LinkIcon } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ConsentBanner } from "./components/ConsentBanner";
 import { CustomizationPanel } from "./components/customization";
 import { EmailForm, PhoneForm, TextForm, URLForm, VCardForm } from "./components/forms";
 import { Header } from "./components/Header";
@@ -7,6 +8,7 @@ import { QRPreview } from "./components/QRPreview";
 import { SavedConfigs } from "./components/SavedConfigs";
 import { TypeSelector } from "./components/TypeSelector";
 import { SectionLabel } from "./components/ui";
+import { useAnalyticsConsent } from "./hooks/useAnalyticsConsent";
 import { useIsDesktop } from "./hooks/useMediaQuery";
 import { useSavedConfigs } from "./hooks/useSavedConfigs";
 import type { Customization, FormDataMap, QRType, SavedConfig } from "@frontsail/qr-core";
@@ -50,6 +52,10 @@ function App() {
   }, []);
 
   const { savedConfigs, saveConfig, deleteConfig, clearAllConfigs } = useSavedConfigs();
+  const { decision: consentDecision, setEnabled: setConsentEnabled } = useAnalyticsConsent();
+  /* How much room the consent bar is currently stealing from the bottom of the
+     viewport. Zero once it is dismissed. */
+  const [consentInset, setConsentInset] = useState(0);
   const isDesktop = useIsDesktop();
 
   const hasContent = useMemo(
@@ -173,11 +179,16 @@ function App() {
       onDelete={deleteConfig}
       onShare={handleShareConfig}
       onClearAll={clearAllConfigs}
+      analyticsEnabled={consentDecision === "granted"}
+      onAnalyticsChange={setConsentEnabled}
     />
   );
 
   return (
-    <div className="min-h-screen bg-[var(--surface-page)] flex flex-col">
+    <div
+      className="min-h-screen bg-[var(--surface-page)] flex flex-col"
+      style={{ "--consent-inset": `${consentInset}px` } as React.CSSProperties}
+    >
       <Header
         onToggleSidebar={toggleSidebar}
         sidebarOpen={sidebarOpen}
@@ -193,7 +204,9 @@ function App() {
               sidebarOpen ? "w-[264px]" : "w-0 border-r-0"
             }`}
           >
-            <div className="w-[264px] h-[calc(100vh-3.5rem)] sticky top-14">{historyPane}</div>
+            <div className="w-[264px] h-[calc(100vh-3.5rem-var(--consent-inset))] sticky top-14">
+              {historyPane}
+            </div>
           </aside>
         )}
 
@@ -202,7 +215,7 @@ function App() {
             it stays behind the preview only (QRPreview draws it) so the
             controls below read against plain paper */}
         <main
-          className={`${isDesktop ? "plico-grid" : "bg-[var(--surface-page)]"} flex-1 relative flex flex-col items-center lg:justify-center gap-[18px] min-w-0 px-4 py-6 lg:py-0 pb-24 lg:pb-0`}
+          className={`${isDesktop ? "plico-grid" : "bg-[var(--surface-page)]"} flex-1 relative flex flex-col items-center lg:justify-center gap-[18px] min-w-0 px-4 py-6 lg:py-0 pb-[calc(6rem+var(--consent-inset))] lg:pb-[var(--consent-inset)]`}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
@@ -246,7 +259,7 @@ function App() {
         {/* Inspector — desktop */}
         {isDesktop && (
           <aside className="w-[320px] shrink-0 bg-[var(--surface-card)] border-l border-[var(--border-hairline)]">
-            <div className="sticky top-14 h-[calc(100vh-3.5rem)] overflow-y-auto p-5 flex flex-col gap-6">
+            <div className="sticky top-14 h-[calc(100vh-3.5rem-var(--consent-inset))] overflow-y-auto p-5 flex flex-col gap-6">
               <div className="flex flex-col gap-2.5">
                 <SectionLabel>01 — Type</SectionLabel>
                 <TypeSelector value={qrType} onChange={setQRType} />
@@ -278,14 +291,17 @@ function App() {
               onShare={handleShareConfig}
               onClearAll={clearAllConfigs}
               onClose={() => setDrawerOpen(false)}
+              analyticsEnabled={consentDecision === "granted"}
+              onAnalyticsChange={setConsentEnabled}
             />
           </div>
         </div>
       )}
 
-      {/* Toast */}
+      {/* Toast — lifted clear of the consent banner while that is on screen,
+          which otherwise covers it on desktop (banner sits above at z-50) */}
       <div
-        className={`fixed bottom-24 lg:bottom-6 left-1/2 -translate-x-1/2 z-30 px-4 py-2.5 bg-[var(--ink-900)] text-[var(--paper-0)] text-[13px] font-medium rounded-[2px] shadow-[var(--shadow-lg)] flex items-center gap-2.5 transition-all duration-[220ms] ${
+        className={`fixed bottom-[calc(6rem+var(--consent-inset))] lg:bottom-[calc(1.5rem+var(--consent-inset))] left-1/2 -translate-x-1/2 z-30 px-4 py-2.5 bg-[var(--ink-900)] text-[var(--paper-0)] text-[13px] font-medium rounded-[2px] shadow-[var(--shadow-lg)] flex items-center gap-2.5 transition-all duration-[220ms] ${
           toastVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2 pointer-events-none"
         }`}
       >
@@ -296,6 +312,14 @@ function App() {
         )}
         {toast?.text}
       </div>
+
+      {consentDecision === null && (
+        <ConsentBanner
+          onAccept={() => setConsentEnabled(true)}
+          onDecline={() => setConsentEnabled(false)}
+          onHeightChange={setConsentInset}
+        />
+      )}
     </div>
   );
 }
