@@ -108,6 +108,47 @@ function ConfigCard({ config, onRestore, onDelete, onShare }: ConfigCardProps) {
   );
 }
 
+interface AnalyticsToggleProps {
+  enabled: boolean;
+  onChange: (enabled: boolean) => void;
+}
+
+/**
+ * Withdraw-or-restore control for analytics consent.
+ *
+ * Lives here because the rail's footer is already where the app states what it
+ * keeps and where — "Saved in this browser only" makes the same promise about
+ * history that this row makes about measurement. Consent that can only be given
+ * and never taken back is not consent, and GDPR expects withdrawal to be as
+ * easy as granting.
+ */
+function AnalyticsToggle({ enabled, onChange }: AnalyticsToggleProps) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={enabled}
+      aria-label="Analytics"
+      onClick={() => onChange(!enabled)}
+      className="flex items-center gap-1.5 bg-transparent border-none cursor-pointer px-1.5 py-1 -mr-1.5 rounded-[2px] transition-colors duration-[140ms] hover:bg-[var(--ink-100)]"
+    >
+      <span
+        aria-hidden
+        className={`w-1.5 h-1.5 rounded-full ${
+          enabled ? "bg-[var(--signal-ok-500)]" : "bg-[var(--ink-300)]"
+        }`}
+      />
+      <span
+        className={`font-mono text-[10px] tracking-[0.08em] uppercase ${
+          enabled ? "text-[var(--ink-700)]" : "text-[var(--text-muted)]"
+        }`}
+      >
+        {enabled ? "On" : "Off"}
+      </span>
+    </button>
+  );
+}
+
 interface SavedConfigsProps {
   configs: SavedConfig[];
   onRestore: (config: SavedConfig) => void;
@@ -115,6 +156,8 @@ interface SavedConfigsProps {
   onShare: (config: SavedConfig) => void;
   onClearAll: () => void;
   onClose?: () => void;
+  analyticsEnabled: boolean;
+  onAnalyticsChange: (enabled: boolean) => void;
 }
 
 /* History rail content — rendered inside the desktop sidebar and the
@@ -127,6 +170,8 @@ export function SavedConfigs({
   onShare,
   onClearAll,
   onClose,
+  analyticsEnabled,
+  onAnalyticsChange,
 }: SavedConfigsProps) {
   return (
     <div className="flex flex-col h-full min-h-0">
@@ -170,10 +215,18 @@ export function SavedConfigs({
         </div>
       )}
 
-      <div className="px-4 py-2.5 border-t border-[var(--border-hairline)]">
-        <span className="font-mono text-[10px] tracking-[0.08em] uppercase text-[var(--text-muted)]">
-          Saved in this browser only
-        </span>
+      <div className="border-t border-[var(--border-hairline)]">
+        <div className="flex items-center justify-between px-4 py-2">
+          <span className="font-mono text-[10px] tracking-[0.08em] uppercase text-[var(--text-muted)]">
+            Analytics
+          </span>
+          <AnalyticsToggle enabled={analyticsEnabled} onChange={onAnalyticsChange} />
+        </div>
+        <div className="px-4 pb-2.5">
+          <span className="font-mono text-[10px] tracking-[0.08em] uppercase text-[var(--text-muted)]">
+            Saved in this browser only
+          </span>
+        </div>
       </div>
     </div>
   );
