@@ -31,7 +31,7 @@ jobs:
     runs-on: ubuntu-latest # GitHub-hosted only — trusted publishing rejects self-hosted runners
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: ${{ github.event.inputs.tag || github.ref }}
           fetch-depth: 0 # full history, so the master-ancestry check below can resolve
