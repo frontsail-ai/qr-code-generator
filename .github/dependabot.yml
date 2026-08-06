@@ -38,3 +38,28 @@ updates:
     groups:
       minor-and-patch:
         update-types: ["minor", "patch"]
+    ignore:
+      # `vite` here is an alias, not upstream Vite. Every manifest declares it as
+      # `npm:@voidzero-dev/vite-plus-core@<version>`, with a matching root
+      # `overrides` entry — it is the Vite+ toolchain core, and it moves in
+      # lockstep with `vite-plus` when we choose to move it, rather than on
+      # upstream Vite's release schedule. Dependabot sees the bare name `vite`
+      # and offers upstream releases: it proposed 0.2.4 -> 8.2.0 in #28.
+      #
+      # Dependabot's handling of aliased specs is undocumented, so this entry is
+      # a best-evidence guess: #28 reported the dependency as `vite`, so matching
+      # on that name should work. If a `vite` bump shows up regardless, then
+      # ignores do not cover aliases — close it as mislabelled (see #28 for the
+      # wording) and treat this comment as the standing explanation.
+      - dependency-name: "vite"
+
+      # zod 4 does not typecheck against @modelcontextprotocol/sdk. The SDK
+      # declares `zod: "^3.25 || ^4.0"` as both dependency and peer, but its
+      # zod-compat types reject zod 4's `$strip` object schemas: `registerTool`'s
+      # inputSchema fails to match `AnySchema`, and the tool callback's argument
+      # silently degrades to `any` (see #29). SDK 1.30.0 is the latest published
+      # release, so there is nowhere to upgrade to that fixes it.
+      #
+      # Drop this entry once the SDK ships a release that accepts zod 4 schemas.
+      - dependency-name: "zod"
+        update-types: ["version-update:semver-major"]
