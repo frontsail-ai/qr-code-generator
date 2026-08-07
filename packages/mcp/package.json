@@ -52,7 +52,7 @@
     "@types/jsdom": "^27.0.0",
     "@types/node": "^24.10.1",
     "jsqr": "^1.4.0",
-    "typescript": "^5.9.3",
+    "typescript": "^7.0.2",
     "vite": "npm:@voidzero-dev/vite-plus-core@0.2.7",
     "vite-plus": "0.2.7"
   },
