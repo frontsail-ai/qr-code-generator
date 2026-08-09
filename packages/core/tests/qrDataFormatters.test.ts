@@ -29,14 +29,26 @@ describe("email", () => {
     );
   });
 
-  test("percent-escapes subject and body", () => {
+  test("percent-escapes subject and body per RFC 6068 (spaces as %20, not +)", () => {
     expect(
       formatQRData("email", {
         to: "hi@example.com",
         subject: "Tea & biscuits",
         body: "line one\nline two",
       }),
-    ).toBe("mailto:hi@example.com?subject=Tea+%26+biscuits&body=line+one%0Aline+two");
+    ).toBe("mailto:hi@example.com?subject=Tea%20%26%20biscuits&body=line%20one%0Aline%20two");
+  });
+
+  test("escapes a literal plus so clients cannot decode it as a space", () => {
+    expect(formatQRData("email", { to: "hi@example.com", subject: "a+b", body: "" })).toBe(
+      "mailto:hi@example.com?subject=a%2Bb",
+    );
+  });
+
+  test("percent-encodes non-ASCII text as UTF-8", () => {
+    expect(
+      formatQRData("email", { to: "hi@example.com", subject: "ümlauts — dash", body: "" }),
+    ).toBe("mailto:hi@example.com?subject=%C3%BCmlauts%20%E2%80%94%20dash");
   });
 
   test("omits the query string parts that are empty", () => {

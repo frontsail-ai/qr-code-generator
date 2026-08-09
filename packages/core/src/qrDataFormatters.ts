@@ -25,11 +25,13 @@ const formatters: FormatterMap = {
   email: (data: EmailFormData) => {
     const { to, subject, body } = data;
     if (!to) return "";
-    const params = new URLSearchParams();
-    if (subject) params.set("subject", subject);
-    if (body) params.set("body", body);
-    const queryString = params.toString();
-    return `mailto:${to}${queryString ? `?${queryString}` : ""}`;
+    /* Built by hand rather than with `URLSearchParams`: that class emits
+       form-encoding (spaces as `+`), which mail clients render literally in
+       mailto links. RFC 6068 wants percent-encoding (`%20`). */
+    const parts: string[] = [];
+    if (subject) parts.push(`subject=${encodeURIComponent(subject)}`);
+    if (body) parts.push(`body=${encodeURIComponent(body)}`);
+    return `mailto:${to}${parts.length > 0 ? `?${parts.join("&")}` : ""}`;
   },
 
   phone: (data: PhoneFormData) => {
