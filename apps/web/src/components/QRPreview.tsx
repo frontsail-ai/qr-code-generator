@@ -2,7 +2,7 @@ import { Download, FileCode, ScanLine, Share2 } from "lucide-react";
 import { useMemo, useRef } from "react";
 import { useDebounce } from "../hooks/useDebounce";
 import { useIsDesktop } from "../hooks/useMediaQuery";
-import { useQRCode } from "../hooks/useQRCode";
+import { RENDER_STALLED_ERROR, useQRCode } from "../hooks/useQRCode";
 import type { Customization, FormDataMap, QRType } from "@frontsail/qr-core";
 import { formatQRData, isTransparent } from "@frontsail/qr-core";
 import { Badge, Button, IconButton } from "./ui";
@@ -39,7 +39,9 @@ export function QRPreview({ qrType, formData, customization, onSave, onShare }: 
 
   const errorMessage = error?.includes("code length overflow")
     ? "This content is too long to fit in a QR code. Shorten it to generate one."
-    : "Couldn't generate a QR code for this content.";
+    : error?.includes(RENDER_STALLED_ERROR)
+      ? "The code never finished drawing — the logo image may be broken. Remove or replace it."
+      : "Couldn't generate a QR code for this content.";
 
   const handleDownloadPNG = () => {
     downloadPNG();

@@ -1,6 +1,10 @@
 import { readFileSync } from "node:fs";
 import { expect, test } from "@playwright/test";
 
+// Smallest valid PNG (1×1 black pixel) — a logo that decodes successfully
+const ONE_BY_ONE_PNG_BASE64 =
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
+
 test.describe("QR Code Generator", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("/");
@@ -459,6 +463,99 @@ test.describe("QR Code Generator", () => {
     test("should have hidden file input", async ({ page }) => {
       const fileInput = page.locator('input[type="file"]');
       await expect(fileInput).toBeHidden();
+    });
+
+    test("should accept a valid logo and embed it in the preview", async ({ page }) => {
+      await page.getByPlaceholder("frontsail.ai").fill("logo-test.com");
+      await page.locator('input[type="file"]').setInputFiles({
+        name: "logo.png",
+        mimeType: "image/png",
+        buffer: Buffer.from(ONE_BY_ONE_PNG_BASE64, "base64"),
+      });
+
+      await expect(page.getByRole("button", { name: "Remove" })).toBeVisible();
+      // qr-code-styling embeds the logo as an <image> inside the preview SVG
+      await expect(page.locator("section svg image").first()).toBeVisible();
+      await expect(page.getByRole("button", { name: "Download PNG" })).toBeEnabled();
+    });
+
+    test("should reject a corrupt image file at upload", async ({ page }) => {
+      let dialogMessage = null;
+      page.on("dialog", async (dialog) => {
+        dialogMessage = dialog.message();
+        await dialog.dismiss();
+      });
+
+      await page.getByPlaceholder("frontsail.ai").fill("corrupt-test.com");
+      await page.locator('input[type="file"]').setInputFiles({
+        name: "corrupt.png",
+        mimeType: "image/png",
+        buffer: Buffer.from("not an image at all, just bytes wearing a png name"),
+      });
+
+      // The file is rejected before it ever reaches the customization state
+      await expect(page.getByText("Click to upload logo")).toBeVisible();
+      await expect.poll(() => dialogMessage).toContain("not a readable image");
+
+      // The QR itself keeps rendering and exporting without the logo
+      await page.waitForTimeout(400);
+      await expect(page.locator("section svg").first()).toBeVisible();
+      await expect(page.getByRole("button", { name: "Download PNG" })).toBeEnabled();
+    });
+
+    test("should surface a render error when a stored corrupt logo stalls drawing", async ({
+      page,
+    }) => {
+      /* The upload gate can no longer be bypassed from the UI, but configs
+         saved before the gate existed (or edited storage) can still carry an
+         undecodable logo. qr-code-styling's drawing promise never settles on
+         one — the watchdog must convert that silent stall into the error
+         state instead of a blank-but-exportable preview. */
+      await page.evaluate(() => {
+        const config = {
+          id: "corrupt-logo-seed",
+          timestamp: new Date().toISOString(),
+          qrType: "url",
+          formData: {
+            url: { url: "https://stalled-render.example" },
+            email: { to: "", subject: "", body: "" },
+            phone: { number: "" },
+            text: { content: "" },
+            vcard: {
+              firstName: "",
+              lastName: "",
+              phone: "",
+              email: "",
+              org: "",
+              title: "",
+              website: "",
+            },
+          },
+          customization: {
+            foregroundColor: "#1B1812",
+            foregroundColor2: "#2C4A8A",
+            gradientType: "none",
+            backgroundColor: "#FFFFFF",
+            dotType: "square",
+            cornerSquareType: "square",
+            cornerDotType: "square",
+            logo: `data:image/png;base64,${btoa("definitely not a png")}`,
+          },
+        };
+        localStorage.setItem("qr-saved-configs", JSON.stringify([config]));
+      });
+      await page.reload();
+
+      await page.getByTestId("history-card").first().hover();
+      await page.getByRole("button", { name: "Restore" }).click();
+
+      // Debounce (300ms) + render watchdog (3s) must elapse before the stall is called
+      await expect(
+        page.getByText("The code never finished drawing — the logo image may be broken", {
+          exact: false,
+        }),
+      ).toBeVisible({ timeout: 6000 });
+      await expect(page.getByRole("button", { name: "Download PNG" })).toBeDisabled();
     });
   });
 

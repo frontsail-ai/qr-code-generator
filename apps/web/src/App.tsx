@@ -11,6 +11,7 @@ import { SectionLabel } from "./components/ui";
 import { useAnalyticsConsent } from "./hooks/useAnalyticsConsent";
 import { useIsDesktop } from "./hooks/useMediaQuery";
 import { useSavedConfigs } from "./hooks/useSavedConfigs";
+import { LogoValidationError, validateLogoImage } from "./utils/validateLogoImage";
 import type { Customization, FormDataMap, QRType, SavedConfig } from "@frontsail/qr-core";
 import {
   decodeDesignFromUrl,
@@ -154,22 +155,18 @@ function App() {
     }
   }, []);
 
-  const handleDrop = useCallback((e: React.DragEvent) => {
+  const handleDrop = useCallback(async (e: React.DragEvent) => {
     e.preventDefault();
     setIsDraggingOver(false);
 
     const file = e.dataTransfer.files[0];
     if (!file?.type.startsWith("image/")) return;
-    if (file.size > 2 * 1024 * 1024) {
-      alert("File size must be under 2MB");
-      return;
+    try {
+      const logo = await validateLogoImage(file);
+      setCustomization((prev) => ({ ...prev, logo }));
+    } catch (err) {
+      alert(err instanceof LogoValidationError ? err.message : "Could not read the file");
     }
-
-    const reader = new FileReader();
-    reader.onload = () => {
-      setCustomization((prev) => ({ ...prev, logo: reader.result as string }));
-    };
-    reader.readAsDataURL(file);
   }, []);
 
   const historyPane = (
