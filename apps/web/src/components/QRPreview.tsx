@@ -5,7 +5,7 @@ import { useIsDesktop } from "../hooks/useMediaQuery";
 import { RENDER_STALLED_ERROR, useQRCode } from "../hooks/useQRCode";
 import type { Customization, FormDataMap, QRType } from "@frontsail/qr-core";
 import { assessScanRisk, formatQRData, isTransparent } from "@frontsail/qr-core";
-import { Badge, Button, IconButton } from "./ui";
+import { Badge, Button, IconButton, Note } from "./ui";
 
 interface QRPreviewProps {
   qrType: QRType;
@@ -13,9 +13,21 @@ interface QRPreviewProps {
   customization: Customization;
   onSave?: () => void;
   onShare?: () => void;
+  /* Whether this design is being kept anywhere — see `useDraft`. It is drawn
+     here, beside the code, because that is where the user is looking when it
+     stops being true; the history rail it concerns is collapsible on desktop
+     and behind a drawer on mobile, which would make it a message nobody sees. */
+  notice?: { variant: "warn" | "error"; message: string } | null;
 }
 
-export function QRPreview({ qrType, formData, customization, onSave, onShare }: QRPreviewProps) {
+export function QRPreview({
+  qrType,
+  formData,
+  customization,
+  onSave,
+  onShare,
+  notice,
+}: QRPreviewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const isDesktop = useIsDesktop();
 
@@ -177,6 +189,18 @@ export function QRPreview({ qrType, formData, customization, onSave, onShare }: 
           />
           <span className="text-xs text-[var(--ink-700)] leading-[1.45]">{scanRisk.message}</span>
         </div>
+      )}
+
+      {/* Storage trouble — the design is fine, keeping it is not */}
+      {notice && (
+        <Note
+          variant={notice.variant}
+          role={notice.variant === "error" ? "alert" : "status"}
+          className="w-[328px] max-w-full"
+          data-testid="storage-notice"
+        >
+          {notice.message}
+        </Note>
       )}
 
       {/* Export — static block on desktop */}

@@ -1,8 +1,7 @@
 import { compressToEncodedURIComponent, decompressFromEncodedURIComponent } from "lz-string";
 import type { Customization, FormDataMap, QRType } from "./types";
-import { DEFAULT_CUSTOMIZATION, DEFAULT_FORM_DATA } from "./constants";
-
-const VALID_QR_TYPES: QRType[] = ["url", "email", "phone", "text", "vcard"];
+import { DEFAULT_CUSTOMIZATION } from "./constants";
+import { type DesignState, normalizeDesign } from "./design";
 
 interface SharePayload {
   v: 1;
@@ -20,10 +19,6 @@ function stripDefaults(customization: Customization): Partial<Omit<Customization
     }
   }
   return partial;
-}
-
-function applyDefaults(partial: Partial<Omit<Customization, "logo">>): Customization {
-  return { ...DEFAULT_CUSTOMIZATION, ...partial, logo: null };
 }
 
 /* `baseUrl` is the origin plus path the link should point at — browser callers
@@ -45,15 +40,9 @@ export function encodeDesignToUrl(
   return `${baseUrl}#s=${compressed}`;
 }
 
-interface DecodedDesign {
-  qrType: QRType;
-  formData: FormDataMap;
-  customization: Customization;
-}
-
 /* `hash` is the URL fragment including the leading "#" — browser callers pass
    `window.location.hash`. */
-export function decodeDesignFromUrl(hash: string): DecodedDesign | null {
+export function decodeDesignFromUrl(hash: string): DesignState | null {
   if (!hash.startsWith("#s=")) return null;
 
   try {
@@ -61,20 +50,20 @@ export function decodeDesignFromUrl(hash: string): DecodedDesign | null {
     if (!json) return null;
 
     const payload = JSON.parse(json) as SharePayload;
+    /* Structural rules of the payload itself — a link is a fixed shape, so a
+       missing form or a version this build cannot read is a broken link, not a
+       design to be patched up with defaults. What the fields are allowed to
+       contain is `normalizeDesign`'s business, not this codec's. */
     if (payload.v !== 1) return null;
-    if (!VALID_QR_TYPES.includes(payload.t)) return null;
     if (!payload.f || typeof payload.f !== "object") return null;
 
-    const formData: FormDataMap = {
-      ...DEFAULT_FORM_DATA,
-      [payload.t]: { ...DEFAULT_FORM_DATA[payload.t], ...payload.f },
-    };
-
-    return {
+    return normalizeDesign({
       qrType: payload.t,
-      formData,
-      customization: applyDefaults(payload.c ?? {}),
-    };
+      // The link only carries the selected type's fields; the rest default
+      formData: { [payload.t]: payload.f },
+      // Logos never travel in links — the codec strips them on the way out too
+      customization: { ...payload.c, logo: null },
+    });
   } catch {
     return null;
   }
