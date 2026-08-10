@@ -1079,8 +1079,9 @@ test.describe("QR Code Generator", () => {
       // Should have multiple restore buttons
       await expect(page.getByRole("button", { name: "Restore" })).toHaveCount(2);
 
-      // Clear all
+      // Clear all — arms on the first click, fires on the second
       await page.getByRole("button", { name: "Clear all" }).click();
+      await page.getByRole("button", { name: "Confirm clearing all history" }).click();
 
       // Should show empty message
       await expect(page.getByText("No saved codes yet")).toBeVisible();
@@ -1168,6 +1169,182 @@ test.describe("QR Code Generator", () => {
 
       // Should now have 2 saved configs (new entry for modified config)
       await expect(page.getByRole("button", { name: "Restore" })).toHaveCount(2);
+    });
+  });
+
+  /* Every destructive control in the app used to commit straight to storage or
+     to the canvas with nothing in between (#41). These assert the take-back,
+     not just that the destruction happened. */
+  test.describe("Undo", () => {
+    /* Seeds history directly. Going through Download PNG costs a debounce and a
+       download event per entry, and these tests care about *order*, which the
+       save path decides for itself. */
+    async function seedHistory(page, urls) {
+      await page.evaluate((urls) => {
+        localStorage.setItem(
+          "qr-saved-configs",
+          JSON.stringify(
+            urls.map((url, i) => ({
+              id: `seed-${i}`,
+              timestamp: new Date(Date.now() - i * 3600000).toISOString(),
+              qrType: "url",
+              formData: {
+                url: { url },
+                email: { to: "", subject: "", body: "" },
+                phone: { number: "" },
+                text: { content: "" },
+                vcard: {
+                  firstName: "",
+                  lastName: "",
+                  phone: "",
+                  email: "",
+                  org: "",
+                  title: "",
+                  website: "",
+                },
+              },
+              customization: {
+                foregroundColor: "#1B1812",
+                foregroundColor2: "#2C4A8A",
+                gradientType: "none",
+                backgroundColor: "#FFFFFF",
+                dotType: "square",
+                cornerSquareType: "square",
+                cornerDotType: "square",
+                logo: null,
+              },
+            })),
+          ),
+        );
+      }, urls);
+      await page.reload();
+    }
+
+    const storedUrls = (page) =>
+      page.evaluate(() =>
+        JSON.parse(localStorage.getItem("qr-saved-configs") ?? "[]").map((c) => c.formData.url.url),
+      );
+
+    test.beforeEach(async ({ page }) => {
+      await page.evaluate(() => localStorage.clear());
+      await page.reload();
+    });
+
+    test("puts a deleted design back at the position it held", async ({ page }) => {
+      await seedHistory(page, ["first.example", "second.example", "third.example"]);
+
+      // Delete the middle card, so restoring it at the top would be visibly wrong
+      await page.getByTestId("history-card").nth(1).hover();
+      await page.getByRole("button", { name: "Delete" }).nth(1).click();
+      expect(await storedUrls(page)).toEqual(["first.example", "third.example"]);
+
+      /* The toast is the only route back, so it has to be somewhere the user
+         can actually reach — `toBeVisible()` alone would pass off-screen */
+      const toast = page.getByTestId("toast");
+      await expect(toast).toContainText("Design deleted");
+      await expect(toast).toBeInViewport();
+
+      await page.getByRole("button", { name: "Undo" }).click();
+      expect(await storedUrls(page)).toEqual(["first.example", "second.example", "third.example"]);
+    });
+
+    test("brings back the whole history after a clear", async ({ page }) => {
+      await seedHistory(page, ["alpha.example", "beta.example"]);
+
+      await page.getByRole("button", { name: "Clear all" }).click();
+      await page.getByRole("button", { name: "Confirm clearing all history" }).click();
+      await expect(page.getByText("No saved codes yet")).toBeVisible();
+      expect(await storedUrls(page)).toEqual([]);
+
+      await expect(page.getByTestId("toast")).toContainText("Cleared 2 saved designs");
+      await page.getByRole("button", { name: "Undo" }).click();
+
+      expect(await storedUrls(page)).toEqual(["alpha.example", "beta.example"]);
+      await expect(page.getByTestId("history-card")).toHaveCount(2);
+    });
+
+    test("arming Clear all destroys nothing on its own", async ({ page }) => {
+      await seedHistory(page, ["keep-me.example"]);
+
+      await page.getByRole("button", { name: "Clear all" }).click();
+
+      // Armed, not fired
+      await expect(
+        page.getByRole("button", { name: "Confirm clearing all history" }),
+      ).toBeVisible();
+      await expect(page.getByTestId("history-card")).toHaveCount(1);
+      expect(await storedUrls(page)).toEqual(["keep-me.example"]);
+    });
+
+    test("returns the canvas to the design a restore replaced", async ({ page }) => {
+      await seedHistory(page, ["saved-design.example"]);
+
+      await page.getByPlaceholder("frontsail.ai").fill("unsaved-work.example");
+      await page.waitForTimeout(400);
+
+      await page.getByTestId("history-card").first().hover();
+      await page.getByRole("button", { name: "Restore" }).click();
+      await expect(page.getByPlaceholder("frontsail.ai")).toHaveValue("saved-design.example");
+
+      await page.getByRole("button", { name: "Undo" }).click();
+      await expect(page.getByPlaceholder("frontsail.ai")).toHaveValue("unsaved-work.example");
+    });
+
+    test("returns the design a share link displaced", async ({ page }) => {
+      await page.getByPlaceholder("frontsail.ai").fill("shared.example");
+      await page.getByRole("button", { name: "#A63D30" }).first().click();
+      await page.waitForTimeout(400);
+
+      await page.evaluate(() => {
+        window.__copiedLink = null;
+        navigator.clipboard.writeText = (text) => {
+          window.__copiedLink = text;
+          return Promise.resolve();
+        };
+      });
+      await page.getByRole("button", { name: "Copy shareable link", exact: true }).click();
+      await expect.poll(() => page.evaluate(() => window.__copiedLink)).toContain("#s=");
+      const link = await page.evaluate(() => window.__copiedLink);
+
+      await page.getByPlaceholder("frontsail.ai").fill("in-progress.example");
+      await page.waitForTimeout(400);
+
+      await page.evaluate((href) => {
+        window.location.hash = new URL(href).hash;
+      }, link);
+      await expect(page.getByPlaceholder("frontsail.ai")).toHaveValue("shared.example");
+
+      await page.getByRole("button", { name: "Undo" }).click();
+      await expect(page.getByPlaceholder("frontsail.ai")).toHaveValue("in-progress.example");
+    });
+
+    test("brings back a removed logo", async ({ page }) => {
+      await page.getByPlaceholder("frontsail.ai").fill("logo-undo.example");
+      await page.locator('input[type="file"]').setInputFiles({
+        name: "logo.png",
+        mimeType: "image/png",
+        buffer: Buffer.from(ONE_BY_ONE_PNG_BASE64, "base64"),
+      });
+      await expect(page.getByRole("button", { name: "Remove" })).toBeVisible();
+
+      await page.getByRole("button", { name: "Remove" }).click();
+      await expect(page.getByText("Click to upload logo")).toBeVisible();
+
+      await page.getByRole("button", { name: "Undo" }).click();
+      await expect(page.getByRole("button", { name: "Remove" })).toBeVisible();
+      await expect(page.locator("section svg image").first()).toBeVisible();
+    });
+
+    test("an undo offer is spent once", async ({ page }) => {
+      await seedHistory(page, ["only.example"]);
+
+      await page.getByTestId("history-card").first().hover();
+      await page.getByRole("button", { name: "Delete" }).click();
+      await page.getByRole("button", { name: "Undo" }).click();
+      expect(await storedUrls(page)).toEqual(["only.example"]);
+
+      // The offer goes away with the toast, so it cannot be taken twice
+      await expect(page.getByRole("button", { name: "Undo" })).toHaveCount(0);
     });
   });
 });

@@ -1,4 +1,4 @@
-import { Check, ImagePlus, Link as LinkIcon } from "lucide-react";
+import { ImagePlus } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ConsentBanner } from "./components/ConsentBanner";
 import { CustomizationPanel } from "./components/customization";
@@ -7,12 +7,19 @@ import { Header } from "./components/Header";
 import { QRPreview } from "./components/QRPreview";
 import { SavedConfigs } from "./components/SavedConfigs";
 import { TypeSelector } from "./components/TypeSelector";
-import { SectionLabel } from "./components/ui";
+import { SectionLabel, Toast } from "./components/ui";
 import { useAnalyticsConsent } from "./hooks/useAnalyticsConsent";
 import { useIsDesktop } from "./hooks/useMediaQuery";
 import { useLogoIntake } from "./hooks/useLogoIntake";
 import { useSavedConfigs } from "./hooks/useSavedConfigs";
-import type { Customization, FormDataMap, QRType, SavedConfig } from "@frontsail/qr-core";
+import { useToast } from "./hooks/useToast";
+import type {
+  Customization,
+  FormDataMap,
+  QRType,
+  SaveConfigInput,
+  SavedConfig,
+} from "@frontsail/qr-core";
 import {
   decodeDesignFromUrl,
   DEFAULT_CUSTOMIZATION,
@@ -29,8 +36,6 @@ const sharedDesign = decodeDesignFromUrl(window.location.hash);
 // The core codec is DOM-free, so the browser supplies the link's own base
 const shareBaseUrl = () => `${window.location.origin}${window.location.pathname}`;
 
-type ToastKind = "copy" | "save";
-
 function App() {
   const [qrType, setQRType] = useState<QRType>(sharedDesign?.qrType ?? "url");
   const [formData, setFormData] = useState<FormDataMap>(
@@ -42,11 +47,10 @@ function App() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
-  const [toast, setToast] = useState<{ kind: ToastKind; text: string } | null>(null);
-  const [toastVisible, setToastVisible] = useState(false);
-  const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const { toast, toastVisible, showToast, runToastAction } = useToast();
 
-  const { savedConfigs, saveConfig, deleteConfig, clearAllConfigs } = useSavedConfigs();
+  const { savedConfigs, saveConfig, deleteConfig, clearAllConfigs, insertConfig, restoreConfigs } =
+    useSavedConfigs();
   const setLogo = useCallback((logo: string | null) => {
     setCustomization((prev) => ({ ...prev, logo }));
   }, []);
@@ -69,11 +73,21 @@ function App() {
     }));
   };
 
-  const showToast = useCallback((kind: ToastKind, text: string) => {
-    setToast({ kind, text });
-    setToastVisible(true);
-    clearTimeout(toastTimeoutRef.current);
-    toastTimeoutRef.current = setTimeout(() => setToastVisible(false), 2000);
+  /* What is on the canvas right now, kept in a ref rather than read from state
+     by the handlers that need it. Three of the four things that overwrite a
+     design (restore, a share link arriving, removing the logo) have to snapshot
+     it first so "Undo" has somewhere to go back to; reading it through the
+     closure instead would rebuild those handlers — and re-register the
+     `hashchange` listener — on every keystroke. */
+  const designRef = useRef<SaveConfigInput>({ qrType, formData, customization });
+  useEffect(() => {
+    designRef.current = { qrType, formData, customization };
+  }, [qrType, formData, customization]);
+
+  const applyDesign = useCallback((design: SaveConfigInput) => {
+    setQRType(design.qrType);
+    setFormData(design.formData);
+    setCustomization(design.customization);
   }, []);
 
   /* The hash is a live input, not just a boot parameter. Opening a share link
@@ -101,16 +115,21 @@ function App() {
     const handleHashChange = () => {
       const design = consumeShareHash();
       if (!design) return;
-      setQRType(design.qrType);
-      setFormData(design.formData);
-      setCustomization(design.customization);
-      // The design replaces what is on screen, so say so rather than swapping it silently
-      showToast("copy", "Shared design loaded");
+      /* The design replaces what is on screen, so say so rather than swapping
+         it silently — and hand back what it displaced. A link opened in a tab
+         that already holds unsaved work is the one arrival the user did not
+         choose the timing of. */
+      const previous = designRef.current;
+      applyDesign(design);
+      showToast("copy", "Shared design loaded", {
+        label: "Undo",
+        onAction: () => applyDesign(previous),
+      });
     };
 
     window.addEventListener("hashchange", handleHashChange);
     return () => window.removeEventListener("hashchange", handleHashChange);
-  }, [showToast]);
+  }, [applyDesign, showToast]);
 
   const handleSave = useCallback(() => {
     saveConfig({
@@ -121,12 +140,51 @@ function App() {
     showToast("save", "Saved to history");
   }, [qrType, formData, customization, saveConfig, showToast]);
 
-  const handleRestore = useCallback((config: SavedConfig) => {
-    setQRType(config.qrType);
-    setFormData(config.formData);
-    setCustomization(config.customization);
-    setDrawerOpen(false);
-  }, []);
+  /* Restoring is not destructive to history, but it is destructive to whatever
+     was on the canvas — which, unlike a saved config, has no copy anywhere. */
+  const handleRestore = useCallback(
+    (config: SavedConfig) => {
+      const previous = designRef.current;
+      applyDesign(config);
+      setDrawerOpen(false);
+      showToast("undo", "Design restored", {
+        label: "Undo",
+        onAction: () => applyDesign(previous),
+      });
+    },
+    [applyDesign, showToast],
+  );
+
+  const handleDelete = useCallback(
+    (config: SavedConfig) => {
+      const index = savedConfigs.findIndex((c) => c.id === config.id);
+      deleteConfig(config.id);
+      showToast("undo", "Design deleted", {
+        label: "Undo",
+        onAction: () => insertConfig(config, index),
+      });
+    },
+    [savedConfigs, deleteConfig, insertConfig, showToast],
+  );
+
+  const handleClearAll = useCallback(() => {
+    const cleared = savedConfigs;
+    clearAllConfigs();
+    showToast("undo", `Cleared ${cleared.length} saved design${cleared.length === 1 ? "" : "s"}`, {
+      label: "Undo",
+      onAction: () => restoreConfigs(cleared),
+    });
+  }, [savedConfigs, clearAllConfigs, restoreConfigs, showToast]);
+
+  /* The logo is the one input the app cannot reproduce for you: the file lives
+     on your disk, and what the app holds is a data URL derived from it. Undo
+     saves a trip back to the file picker. */
+  const handleLogoRemove = useCallback(() => {
+    const previous = designRef.current.customization.logo;
+    removeLogo();
+    if (!previous) return;
+    showToast("undo", "Logo removed", { label: "Undo", onAction: () => setLogo(previous) });
+  }, [removeLogo, setLogo, showToast]);
 
   const handleShare = useCallback(() => {
     const url = encodeDesignToUrl(qrType, formData, customization, shareBaseUrl());
@@ -205,9 +263,9 @@ function App() {
     <SavedConfigs
       configs={savedConfigs}
       onRestore={handleRestore}
-      onDelete={deleteConfig}
+      onDelete={handleDelete}
       onShare={handleShareConfig}
-      onClearAll={clearAllConfigs}
+      onClearAll={handleClearAll}
       analyticsEnabled={consentDecision === "granted"}
       onAnalyticsChange={setConsentEnabled}
     />
@@ -270,7 +328,7 @@ function App() {
                 onChange={setCustomization}
                 logoError={logoError}
                 onLogoFile={acceptLogoFile}
-                onLogoRemove={removeLogo}
+                onLogoRemove={handleLogoRemove}
               />
             </div>
           )}
@@ -308,7 +366,7 @@ function App() {
                 onChange={setCustomization}
                 logoError={logoError}
                 onLogoFile={acceptLogoFile}
-                onLogoRemove={removeLogo}
+                onLogoRemove={handleLogoRemove}
               />
             </div>
           </aside>
@@ -328,9 +386,9 @@ function App() {
             <SavedConfigs
               configs={savedConfigs}
               onRestore={handleRestore}
-              onDelete={deleteConfig}
+              onDelete={handleDelete}
               onShare={handleShareConfig}
-              onClearAll={clearAllConfigs}
+              onClearAll={handleClearAll}
               onClose={() => setDrawerOpen(false)}
               analyticsEnabled={consentDecision === "granted"}
               onAnalyticsChange={setConsentEnabled}
@@ -339,20 +397,7 @@ function App() {
         </div>
       )}
 
-      {/* Toast — lifted clear of the consent banner while that is on screen,
-          which otherwise covers it on desktop (banner sits above at z-50) */}
-      <div
-        className={`fixed bottom-[calc(6rem+var(--consent-inset))] lg:bottom-[calc(1.5rem+var(--consent-inset))] left-1/2 -translate-x-1/2 z-30 px-4 py-2.5 bg-[var(--ink-900)] text-[var(--paper-0)] text-[13px] font-medium rounded-[2px] shadow-[var(--shadow-lg)] flex items-center gap-2.5 transition-all duration-[220ms] ${
-          toastVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2 pointer-events-none"
-        }`}
-      >
-        {toast?.kind === "copy" ? (
-          <LinkIcon className="w-[15px] h-[15px]" aria-hidden />
-        ) : (
-          <Check className="w-[15px] h-[15px]" aria-hidden />
-        )}
-        {toast?.text}
-      </div>
+      <Toast toast={toast} visible={toastVisible} onAction={runToastAction} />
 
       {consentDecision === null && (
         <ConsentBanner
