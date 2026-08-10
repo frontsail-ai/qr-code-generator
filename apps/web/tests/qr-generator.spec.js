@@ -559,6 +559,41 @@ test.describe("QR Code Generator", () => {
     });
   });
 
+  test.describe("Scannability Warning", () => {
+    test("warns on white-on-white but keeps exports unlocked", async ({ page }) => {
+      await page.getByPlaceholder("frontsail.ai").fill("scan-risk-test.com");
+      // First "#FFFFFF" swatch is the foreground palette's; background is white by default
+      await page.getByRole("button", { name: "#FFFFFF" }).first().click();
+
+      await page.waitForTimeout(400);
+      await expect(page.getByText("too light to scan reliably", { exact: false })).toBeVisible();
+      await expect(page.getByRole("button", { name: "Download PNG" })).toBeEnabled();
+    });
+
+    test("clears the warning when the foreground goes dark again", async ({ page }) => {
+      await page.getByPlaceholder("frontsail.ai").fill("scan-risk-test.com");
+      await page.getByRole("button", { name: "#FFFFFF" }).first().click();
+      await page.waitForTimeout(400);
+      await expect(page.getByText("too light to scan reliably", { exact: false })).toBeVisible();
+
+      await page.getByRole("button", { name: "#1B1812" }).first().click();
+      await page.waitForTimeout(400);
+      await expect(
+        page.getByText("too light to scan reliably", { exact: false }),
+      ).not.toBeVisible();
+    });
+
+    test("warns on an inverted design", async ({ page }) => {
+      await page.getByPlaceholder("frontsail.ai").fill("scan-risk-test.com");
+      // Foreground white + background black = inverted
+      await page.getByRole("button", { name: "#FFFFFF" }).first().click();
+      await page.getByRole("button", { name: "#1B1812" }).nth(1).click();
+
+      await page.waitForTimeout(400);
+      await expect(page.getByText("cannot read inverted codes", { exact: false })).toBeVisible();
+    });
+  });
+
   test.describe("Type Persistence", () => {
     test("should preserve form data when switching between types", async ({ page }) => {
       // Enter URL

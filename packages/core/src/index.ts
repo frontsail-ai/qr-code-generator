@@ -14,6 +14,8 @@ export {
 export { buildGradient, mapOptionsToQRConfig } from "./qrConfig";
 export { QUIET_ZONE_MODULES, quietZoneMargin } from "./quietZone";
 export { formatQRData } from "./qrDataFormatters";
+export { assessScanRisk, relativeLuminance } from "./scanRisk";
+export type { ScanRisk, ScanRiskKind } from "./scanRisk";
 export { decodeDesignFromUrl, encodeDesignToUrl } from "./shareUrl";
 export type {
   CornerDotType,

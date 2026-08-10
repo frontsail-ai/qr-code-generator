@@ -1,10 +1,10 @@
-import { Download, FileCode, ScanLine, Share2 } from "lucide-react";
+import { Download, FileCode, ScanLine, Share2, TriangleAlert } from "lucide-react";
 import { useMemo, useRef } from "react";
 import { useDebounce } from "../hooks/useDebounce";
 import { useIsDesktop } from "../hooks/useMediaQuery";
 import { RENDER_STALLED_ERROR, useQRCode } from "../hooks/useQRCode";
 import type { Customization, FormDataMap, QRType } from "@frontsail/qr-core";
-import { formatQRData, isTransparent } from "@frontsail/qr-core";
+import { assessScanRisk, formatQRData, isTransparent } from "@frontsail/qr-core";
 import { Badge, Button, IconButton } from "./ui";
 
 interface QRPreviewProps {
@@ -36,6 +36,9 @@ export function QRPreview({ qrType, formData, customization, onSave, onShare }: 
   const exportLocked = isEmpty || !!error;
   // Follows the debounced options so the checkerboard and the QR flip together
   const transparentBg = isTransparent(debouncedOptions.backgroundColor);
+  // Colour scannability heuristic — warns, never locks (thresholds are
+  // measured under ideal conditions; see packages/core/src/scanRisk.ts)
+  const scanRisk = useMemo(() => assessScanRisk(debouncedOptions), [debouncedOptions]);
 
   const errorMessage = error?.includes("code length overflow")
     ? "This content is too long to fit in a QR code. Shorten it to generate one."
@@ -162,6 +165,17 @@ export function QRPreview({ qrType, formData, customization, onSave, onShare }: 
           <span className="plico-measure text-[11px] text-[var(--text-muted)] whitespace-nowrap">
             · {debouncedData.length} chars
           </span>
+        </div>
+      )}
+
+      {/* Colour scannability warning — advisory, exports stay unlocked */}
+      {!isEmpty && !error && scanRisk && (
+        <div className="flex items-start gap-2 w-[328px] max-w-full px-2.5 py-2 bg-[var(--signal-warn-50)] rounded-[2px]">
+          <TriangleAlert
+            className="w-3.5 h-3.5 text-[var(--signal-warn-500)] shrink-0 mt-px"
+            aria-hidden
+          />
+          <span className="text-xs text-[var(--ink-700)] leading-[1.45]">{scanRisk.message}</span>
         </div>
       )}
 
