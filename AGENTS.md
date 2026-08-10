@@ -21,7 +21,7 @@ Bun workspace monorepo:
 - `skills/qr-code` — the QR scannability skill, distributed as a Claude Code plugin. Not a workspace package.
 - `tools/*` — reserved in the workspace globs; empty for now.
 
-Rules for `packages/core`: it must stay framework-free and render nothing. Its tsconfig omits the DOM lib, so `window`/`document`/`localStorage` are type errors — pass browser values in as parameters instead (see `encodeDesignToUrl`). Its only dependency is `lz-string`. React-flavored types belong in `apps/web/src/types.ts`.
+Rules for `packages/core`: it must stay framework-free and render nothing. Its tsconfig omits the DOM lib, so `window`/`document`/`localStorage` are type errors — pass browser values in as parameters instead (see `encodeDesignToUrl`). Its only dependency is `lz-string`. React-flavored types belong in `apps/web/src/types.ts`. User text entering a structured payload goes through that format's escaping rules, verified with hostile-input tests — raw interpolation is how the mailto form-encoding and vCard semicolon bugs shipped (see the `email` and `vcard` formatters for the pattern: percent-encoding per RFC 6068, backslash escapes and CRLF per RFC 2426).
 
 Rules for `skills/`:
 
