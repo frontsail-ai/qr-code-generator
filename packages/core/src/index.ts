@@ -11,6 +11,8 @@ export {
   QR_TYPES,
   TRANSPARENT,
 } from "./constants";
+export { normalizeDesign } from "./design";
+export type { DesignState } from "./design";
 export { buildGradient, mapOptionsToQRConfig } from "./qrConfig";
 export { QUIET_ZONE_MODULES, quietZoneMargin } from "./quietZone";
 export { formatQRData, hasAnyContent } from "./qrDataFormatters";
