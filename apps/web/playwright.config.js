@@ -3,7 +3,9 @@ import { defineConfig, devices } from "@playwright/test";
 /* A dedicated port, not Vite's 5173 default: that one is contested by other
    projects on a dev machine, and `reuseExistingServer` would then silently
    point the whole suite at someone else's app. Always start our own. */
-const PORT = 5177;
+/* When 5177 itself is taken on a dev machine, override with QR_E2E_PORT
+   rather than reusing whatever is squatting there. */
+const PORT = Number(process.env.QR_E2E_PORT ?? 5177);
 const BASE_URL = `http://localhost:${PORT}`;
 
 export default defineConfig({

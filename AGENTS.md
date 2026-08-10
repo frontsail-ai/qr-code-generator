@@ -26,7 +26,7 @@ Rules for `packages/core`: it must stay framework-free and render nothing. Its t
 Rules for `skills/`:
 
 - **The plugin root is `skills/qr-code/`, not the repo root.** `.claude-plugin/marketplace.json` at the repo root points `source` at `./skills/qr-code`, which holds its own `.claude-plugin/plugin.json` and `SKILL.md` (the documented single-skill-at-plugin-root form). Pointing `source` at `"./"` also works and installs the whole monorepo — 345 MB, because the root `package.json` makes the installer run a dependency install. Keep the plugin root free of `package.json`.
-- **Every scannability claim in `SKILL.md` is cited or measured.** The measurements come from `packages/mcp/tests/scannability.test.ts`; the evidence table is in `docs/plans/2026-08-01-qr-skill.md`. Do not add a claim to the skill without adding its evidence, and if a threshold in that test moves, update the skill.
+- **Every scannability claim in `SKILL.md` is cited or measured.** The measurements come from `packages/mcp/tests/scannability.test.ts`; the evidence table is in `docs/plans/2026-08-01-qr-skill.md`. Do not add a claim to the skill without adding its evidence, and if a threshold in that test moves, update the skill — and revisit `packages/core/src/scanRisk.ts`, whose warning thresholds anchor the web app's colour-scannability warning to the same measurements.
 - **The skill must agree with the MCP tool descriptions.** They ship to the same audience; a contradiction between them is worse than either being silent.
 - Run `claude plugin validate . --strict` after touching either manifest.
 
