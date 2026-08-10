@@ -15,9 +15,21 @@ import { LogoUploader } from "./LogoUploader";
 interface CustomizationPanelProps {
   customization: Customization;
   onChange: (customization: Customization) => void;
+  /* The logo does not travel with the rest of the customization: a file has to
+     be validated before it can become one, and both this panel and the canvas
+     drop zone feed the same intake, which owns the outcome. */
+  logoError: string | null;
+  onLogoFile: (file: File | undefined) => void;
+  onLogoRemove: () => void;
 }
 
-export function CustomizationPanel({ customization, onChange }: CustomizationPanelProps) {
+export function CustomizationPanel({
+  customization,
+  onChange,
+  logoError,
+  onLogoFile,
+  onLogoRemove,
+}: CustomizationPanelProps) {
   const update = <K extends keyof Customization>(field: K, value: Customization[K]) => {
     onChange({ ...customization, [field]: value });
   };
@@ -56,7 +68,9 @@ export function CustomizationPanel({ customization, onChange }: CustomizationPan
 
       <LogoUploader
         value={customization.logo}
-        onChange={(value: string | null) => update("logo", value)}
+        error={logoError}
+        onFile={onLogoFile}
+        onRemove={onLogoRemove}
       />
     </section>
   );

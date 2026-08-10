@@ -1,5 +1,5 @@
-import type { LucideIcon } from "lucide-react";
-import type { ButtonHTMLAttributes, ReactNode } from "react";
+import { TriangleAlert, type LucideIcon } from "lucide-react";
+import type { ButtonHTMLAttributes, ReactNode, Ref } from "react";
 
 /* Plico primitives — see src/styles/plico.css for the token set. */
 
@@ -106,6 +106,43 @@ export function SectionLabel({ children }: { children: ReactNode }) {
     <div className="flex items-center gap-2.5">
       <span className="plico-label text-[var(--text-secondary)]">{children}</span>
       <span className="flex-1 h-px bg-[var(--border-hairline)]" aria-hidden />
+    </div>
+  );
+}
+
+interface NoteProps {
+  variant?: "warn" | "error";
+  icon?: LucideIcon;
+  /* Set to "alert" when the note appears in response to something the user just
+     did, so screen readers announce it instead of waiting to be visited. */
+  role?: string;
+  className?: string;
+  ref?: Ref<HTMLDivElement>;
+  children: ReactNode;
+}
+
+/* Inline advisory strip — the app's answer to a native alert(). Icon takes the
+   signal colour, the message stays ink so it reads as prose. */
+export function Note({
+  variant = "warn",
+  icon: Icon = TriangleAlert,
+  role,
+  className = "",
+  ref,
+  children,
+}: NoteProps) {
+  const variants = {
+    warn: "bg-[var(--signal-warn-50)] text-[var(--signal-warn-500)]",
+    error: "bg-[var(--signal-error-50)] text-[var(--signal-error-500)]",
+  };
+  return (
+    <div
+      ref={ref}
+      role={role}
+      className={`flex items-start gap-2 px-2.5 py-2 rounded-[2px] ${variants[variant]} ${className}`}
+    >
+      <Icon className="w-3.5 h-3.5 shrink-0 mt-px" aria-hidden />
+      <span className="text-xs text-[var(--ink-700)] leading-[1.45]">{children}</span>
     </div>
   );
 }

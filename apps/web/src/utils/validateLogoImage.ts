@@ -34,7 +34,7 @@ export async function validateLogoImage(file: File): Promise<string> {
     throw new LogoValidationError("Please upload an image file");
   }
   if (file.size > MAX_LOGO_BYTES) {
-    throw new LogoValidationError("File size must be under 2MB");
+    throw new LogoValidationError("File size must be under 2 MB");
   }
 
   const dataUrl = await readAsDataURL(file);

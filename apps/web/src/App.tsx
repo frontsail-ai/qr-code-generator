@@ -10,8 +10,8 @@ import { TypeSelector } from "./components/TypeSelector";
 import { SectionLabel } from "./components/ui";
 import { useAnalyticsConsent } from "./hooks/useAnalyticsConsent";
 import { useIsDesktop } from "./hooks/useMediaQuery";
+import { useLogoIntake } from "./hooks/useLogoIntake";
 import { useSavedConfigs } from "./hooks/useSavedConfigs";
-import { LogoValidationError, validateLogoImage } from "./utils/validateLogoImage";
 import type { Customization, FormDataMap, QRType, SavedConfig } from "@frontsail/qr-core";
 import {
   decodeDesignFromUrl,
@@ -47,6 +47,10 @@ function App() {
   const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   const { savedConfigs, saveConfig, deleteConfig, clearAllConfigs } = useSavedConfigs();
+  const setLogo = useCallback((logo: string | null) => {
+    setCustomization((prev) => ({ ...prev, logo }));
+  }, []);
+  const { error: logoError, acceptFile: acceptLogoFile, removeLogo } = useLogoIntake(setLogo);
   const { decision: consentDecision, setEnabled: setConsentEnabled } = useAnalyticsConsent();
   /* How much room the consent bar is currently stealing from the bottom of the
      viewport. Zero once it is dismissed. */
@@ -185,19 +189,17 @@ function App() {
     }
   }, []);
 
-  const handleDrop = useCallback(async (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDraggingOver(false);
-
-    const file = e.dataTransfer.files[0];
-    if (!file?.type.startsWith("image/")) return;
-    try {
-      const logo = await validateLogoImage(file);
-      setCustomization((prev) => ({ ...prev, logo }));
-    } catch (err) {
-      alert(err instanceof LogoValidationError ? err.message : "Could not read the file");
-    }
-  }, []);
+  /* No type or size pre-filter here: the overlay above promised this file a
+     home, so a rejection owes the same explanation the picker gives. The
+     intake is the only thing allowed to decide. */
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      setIsDraggingOver(false);
+      void acceptLogoFile(e.dataTransfer.files[0]);
+    },
+    [acceptLogoFile],
+  );
 
   const historyPane = (
     <SavedConfigs
@@ -263,7 +265,13 @@ function App() {
                 <SectionLabel>02 — Content</SectionLabel>
                 {renderForm()}
               </div>
-              <CustomizationPanel customization={customization} onChange={setCustomization} />
+              <CustomizationPanel
+                customization={customization}
+                onChange={setCustomization}
+                logoError={logoError}
+                onLogoFile={acceptLogoFile}
+                onLogoRemove={removeLogo}
+              />
             </div>
           )}
 
@@ -295,7 +303,13 @@ function App() {
                 <SectionLabel>02 — Content</SectionLabel>
                 {renderForm()}
               </div>
-              <CustomizationPanel customization={customization} onChange={setCustomization} />
+              <CustomizationPanel
+                customization={customization}
+                onChange={setCustomization}
+                logoError={logoError}
+                onLogoFile={acceptLogoFile}
+                onLogoRemove={removeLogo}
+              />
             </div>
           </aside>
         )}
