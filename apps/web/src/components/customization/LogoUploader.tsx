@@ -1,6 +1,7 @@
 import { ImageUp, TriangleAlert } from "lucide-react";
 import type { ChangeEvent } from "react";
 import { useRef } from "react";
+import { LogoValidationError, validateLogoImage } from "../../utils/validateLogoImage";
 
 interface LogoUploaderProps {
   value: string | null;
@@ -10,25 +11,19 @@ interface LogoUploaderProps {
 export function LogoUploader({ value, onChange }: LogoUploaderProps) {
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (!file.type.startsWith("image/")) {
-      alert("Please upload an image file");
-      return;
+    try {
+      onChange(await validateLogoImage(file));
+    } catch (err) {
+      alert(err instanceof LogoValidationError ? err.message : "Could not read the file");
+      // Allow re-selecting the same (rejected) file to retry
+      if (inputRef.current) {
+        inputRef.current.value = "";
+      }
     }
-
-    if (file.size > 2 * 1024 * 1024) {
-      alert("File size must be under 2MB");
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = () => {
-      onChange(reader.result as string);
-    };
-    reader.readAsDataURL(file);
   };
 
   const handleRemove = () => {
