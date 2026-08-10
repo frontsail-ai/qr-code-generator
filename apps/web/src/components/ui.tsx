@@ -119,6 +119,7 @@ interface NoteProps {
   role?: string;
   className?: string;
   ref?: Ref<HTMLDivElement>;
+  "data-testid"?: string;
   children: ReactNode;
 }
 
@@ -178,6 +179,7 @@ export function Note({
   role,
   className = "",
   ref,
+  "data-testid": testId,
   children,
 }: NoteProps) {
   const variants = {
@@ -188,6 +190,7 @@ export function Note({
     <div
       ref={ref}
       role={role}
+      data-testid={testId}
       className={`flex items-start gap-2 px-2.5 py-2 rounded-[2px] ${variants[variant]} ${className}`}
     >
       <Icon className="w-3.5 h-3.5 shrink-0 mt-px" aria-hidden />

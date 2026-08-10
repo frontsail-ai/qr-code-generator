@@ -15,6 +15,8 @@
  * a metrics tag.
  */
 
+import { readItem, writeItem } from "./utils/safeStorage";
+
 /** The GA4 property for qr-code-gen.frontsail.app. */
 const MEASUREMENT_ID = "G-EG7WEH32WN";
 
@@ -47,23 +49,18 @@ export function analyticsEnabled(): boolean {
 }
 
 export function readConsent(): ConsentDecision | null {
-  try {
-    const stored = localStorage.getItem(CONSENT_STORAGE_KEY);
-    return stored === "granted" || stored === "denied" ? stored : null;
-  } catch {
-    /* Private browsing and blocked storage both throw. Treat an unreadable
-       decision as no decision: asking twice is recoverable, silently measuring
-       someone who declined is not. */
-    return null;
-  }
+  /* Private browsing and blocked storage both come back empty. Treat an
+     unreadable decision as no decision: asking twice is recoverable, silently
+     measuring someone who declined is not. */
+  const stored = readItem(CONSENT_STORAGE_KEY);
+  return stored === "granted" || stored === "denied" ? stored : null;
 }
 
 export function writeConsent(decision: ConsentDecision): void {
-  try {
-    localStorage.setItem(CONSENT_STORAGE_KEY, decision);
-  } catch {
-    /* A decision we cannot persist still governs this page view. */
-  }
+  /* The one write in the app with nothing to report: a decision that cannot be
+     persisted still governs this page view, and the banner coming back next
+     visit is the visible consequence. */
+  writeItem(CONSENT_STORAGE_KEY, decision);
 }
 
 type GtagFn = (command: string, a?: unknown, b?: unknown) => void;

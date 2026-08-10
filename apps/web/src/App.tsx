@@ -9,24 +9,14 @@ import { SavedConfigs } from "./components/SavedConfigs";
 import { TypeSelector } from "./components/TypeSelector";
 import { SectionLabel, Toast } from "./components/ui";
 import { useAnalyticsConsent } from "./hooks/useAnalyticsConsent";
+import { useDraft } from "./hooks/useDraft";
 import { useIsDesktop } from "./hooks/useMediaQuery";
 import { useLogoIntake } from "./hooks/useLogoIntake";
 import { useSavedConfigs } from "./hooks/useSavedConfigs";
 import { useToast } from "./hooks/useToast";
-import type {
-  Customization,
-  FormDataMap,
-  QRType,
-  SaveConfigInput,
-  SavedConfig,
-} from "@frontsail/qr-core";
-import {
-  decodeDesignFromUrl,
-  DEFAULT_CUSTOMIZATION,
-  DEFAULT_FORM_DATA,
-  encodeDesignToUrl,
-  formatQRData,
-} from "@frontsail/qr-core";
+import type { FormDataMap, QRType, SaveConfigInput, SavedConfig } from "@frontsail/qr-core";
+import { decodeDesignFromUrl, encodeDesignToUrl, formatQRData } from "@frontsail/qr-core";
+import type { StorageFailure } from "./utils/safeStorage";
 
 // Decode shared design from URL hash once at module load (before React mounts).
 // This avoids StrictMode double-mount issues where the hash would be consumed
@@ -36,14 +26,35 @@ const sharedDesign = decodeDesignFromUrl(window.location.hash);
 // The core codec is DOM-free, so the browser supplies the link's own base
 const shareBaseUrl = () => `${window.location.origin}${window.location.pathname}`;
 
+/* What a refused history write means for the user, in their terms. The design
+   is still on screen and still downloadable; what is gone is the record of it. */
+const SAVE_ERRORS: Record<StorageFailure, string> = {
+  quota:
+    "Browser storage is full, so this code was not added to history. The file still downloaded.",
+  unavailable: "This browser is blocking storage, so history cannot keep this code.",
+};
+
+/* An undo gets its own wording because it fails at the worst possible moment —
+   the user is already correcting a mistake, and "the file still downloaded" is
+   no comfort when what they asked for was the design back. */
+const UNDO_ERRORS: Record<StorageFailure, string> = {
+  quota:
+    "Browser storage is full, so that could not be put back. Delete a saved code and try again.",
+  unavailable: "This browser is blocking storage, so that could not be put back.",
+};
+
 function App() {
-  const [qrType, setQRType] = useState<QRType>(sharedDesign?.qrType ?? "url");
-  const [formData, setFormData] = useState<FormDataMap>(
-    sharedDesign?.formData ?? DEFAULT_FORM_DATA,
-  );
-  const [customization, setCustomization] = useState<Customization>(
-    sharedDesign?.customization ?? DEFAULT_CUSTOMIZATION,
-  );
+  const {
+    qrType,
+    setQRType,
+    formData,
+    setFormData,
+    customization,
+    setCustomization,
+    applyDesign,
+    retryPersist,
+    status: draftStatus,
+  } = useDraft(sharedDesign);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
@@ -51,6 +62,19 @@ function App() {
 
   const { savedConfigs, saveConfig, deleteConfig, clearAllConfigs, insertConfig, restoreConfigs } =
     useSavedConfigs();
+  /* Sticky until the next mutation succeeds: a failed write is a standing fact
+     about this browser, not a two-second event like a successful one. */
+  const [historyError, setHistoryError] = useState<string | null>(null);
+  const reportWrite = useCallback(
+    (
+      result: { ok: boolean; reason?: StorageFailure },
+      messages: Record<StorageFailure, string> = SAVE_ERRORS,
+    ) => {
+      setHistoryError(result.ok ? null : messages[result.reason as StorageFailure]);
+      return result.ok;
+    },
+    [],
+  );
   const setLogo = useCallback((logo: string | null) => {
     setCustomization((prev) => ({ ...prev, logo }));
   }, []);
@@ -83,12 +107,6 @@ function App() {
   useEffect(() => {
     designRef.current = { qrType, formData, customization };
   }, [qrType, formData, customization]);
-
-  const applyDesign = useCallback((design: SaveConfigInput) => {
-    setQRType(design.qrType);
-    setFormData(design.formData);
-    setCustomization(design.customization);
-  }, []);
 
   /* The hash is a live input, not just a boot parameter. Opening a share link
      from a tab that already has the app in it only changes the fragment, so
@@ -132,13 +150,12 @@ function App() {
   }, [applyDesign, showToast]);
 
   const handleSave = useCallback(() => {
-    saveConfig({
-      qrType,
-      formData,
-      customization,
-    });
+    // Only claim the save when there is something saved to claim
+    if (!reportWrite(saveConfig({ qrType, formData, customization }))) return;
     showToast("save", "Saved to history");
-  }, [qrType, formData, customization, saveConfig, showToast]);
+    // Storage just proved it has room; a draft that failed earlier can go now
+    retryPersist();
+  }, [qrType, formData, customization, saveConfig, showToast, reportWrite, retryPersist]);
 
   /* Restoring is not destructive to history, but it is destructive to whatever
      was on the canvas — which, unlike a saved config, has no copy anywhere. */
@@ -155,26 +172,31 @@ function App() {
     [applyDesign, showToast],
   );
 
+  /* Removing history is also the one action that hands storage back, so a
+     draft that did not fit before is worth attempting again after it. */
   const handleDelete = useCallback(
     (config: SavedConfig) => {
       const index = savedConfigs.findIndex((c) => c.id === config.id);
-      deleteConfig(config.id);
+      // Nothing was deleted if the write bounced, so there is nothing to undo
+      if (!reportWrite(deleteConfig(config.id))) return;
+      retryPersist();
       showToast("undo", "Design deleted", {
         label: "Undo",
-        onAction: () => insertConfig(config, index),
+        onAction: () => reportWrite(insertConfig(config, index), UNDO_ERRORS),
       });
     },
-    [savedConfigs, deleteConfig, insertConfig, showToast],
+    [savedConfigs, deleteConfig, insertConfig, showToast, reportWrite, retryPersist],
   );
 
   const handleClearAll = useCallback(() => {
     const cleared = savedConfigs;
-    clearAllConfigs();
+    if (!reportWrite(clearAllConfigs())) return;
+    retryPersist();
     showToast("undo", `Cleared ${cleared.length} saved design${cleared.length === 1 ? "" : "s"}`, {
       label: "Undo",
-      onAction: () => restoreConfigs(cleared),
+      onAction: () => reportWrite(restoreConfigs(cleared), UNDO_ERRORS),
     });
-  }, [savedConfigs, clearAllConfigs, restoreConfigs, showToast]);
+  }, [savedConfigs, clearAllConfigs, restoreConfigs, showToast, reportWrite, retryPersist]);
 
   /* The logo is the one input the app cannot reproduce for you: the file lives
      on your disk, and what the app holds is a data URL derived from it. Undo
@@ -259,6 +281,17 @@ function App() {
     [acceptLogoFile],
   );
 
+  /* One line about whether this design is being kept anywhere. The most recent
+     failure wins: a history write the user just asked for outranks the standing
+     state of the background draft. This is the `Note` channel, not the toast's
+     action slot — a full disk is a condition to report, not an action to take
+     back. */
+  const notice = historyError
+    ? { variant: "error" as const, message: historyError }
+    : draftStatus
+      ? { variant: draftStatus.variant, message: draftStatus.message }
+      : null;
+
   const historyPane = (
     <SavedConfigs
       configs={savedConfigs}
@@ -313,6 +346,7 @@ function App() {
             customization={customization}
             onSave={handleSave}
             onShare={handleShare}
+            notice={notice}
           />
 
           {/* Mobile-only: type + content + style, stacked under the preview */}
