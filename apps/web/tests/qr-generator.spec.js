@@ -117,6 +117,76 @@ test.describe("QR Code Generator", () => {
     });
   });
 
+  /* The preview prints the payload it is about to encode, so these assert the
+     bytes a scanner receives rather than merely that something rendered. The
+     per-character rules are pinned in packages/core's unit tests; what is
+     covered here is that the app shows the user the encoded form, and that an
+     unrepresentable value reaches the empty state instead of a QR that looks
+     fine and resolves somewhere else. */
+  test.describe("Payload Encoding", () => {
+    /* A guard, not a new behaviour: this is what the app already produced, and
+       #44 proposed changing it to "tel:+15551234567". RFC 3966 §3 names "-",
+       ".", "(" and ")" as visual separators and pointedly excludes the space,
+       so the existing output is the conformant one and the proposal would
+       have been a regression. */
+    test("keeps the visual separators RFC 3966 allows in a phone number", async ({ page }) => {
+      await page.getByRole("button", { name: "Phone" }).click();
+      await page.getByPlaceholder("+1 234 567 8900").fill("+1 (555) 123-4567");
+
+      await expect(page.getByText("tel:+1(555)123-4567", { exact: true })).toBeVisible();
+      await expect(page.getByRole("button", { name: "Download PNG" })).toBeEnabled();
+    });
+
+    /* Dropping the letters would leave "tel:+15551234567.89" — a valid URI
+       whose "." is a separator, so it dials a different number and looks
+       entirely correct doing it.
+
+       Starts from a settled, encodable number on purpose. Typing the bad one
+       into an empty form would assert against the 300ms debounce window,
+       where the readout is still empty from before the keystroke — that
+       passes against the old code too, for entirely the wrong reason. */
+    test("encodes nothing for a phone number it cannot represent", async ({ page }) => {
+      await page.getByRole("button", { name: "Phone" }).click();
+      const input = page.getByPlaceholder("+1 234 567 8900");
+
+      await input.fill("+1 555 123 4567");
+      await expect(page.getByText("tel:+15551234567", { exact: true })).toBeVisible();
+
+      await input.fill("+1 555 123 4567 ext. 89");
+      await expect(page.getByText("Nothing to encode yet")).toBeVisible();
+      await expect(page.getByRole("button", { name: "Download PNG" })).toBeDisabled();
+      await expect(page.getByRole("button", { name: "Download SVG" })).toBeDisabled();
+      await expect(page.getByRole("button", { name: "Share" })).toBeDisabled();
+
+      // and recovers as soon as the number becomes representable again
+      await input.fill("+1 555 123 4567");
+      await expect(page.getByText("tel:+15551234567", { exact: true })).toBeVisible();
+      await expect(page.getByRole("button", { name: "Download PNG" })).toBeEnabled();
+    });
+
+    // #43 — raw spaces make the payload an invalid URI and scanners diverge on it
+    test("percent-encodes spaces in a URL", async ({ page }) => {
+      await page.getByPlaceholder("frontsail.ai").fill("frontsail.ai/some page?q=a b");
+
+      await expect(
+        page.getByText("https://frontsail.ai/some%20page?q=a%20b", { exact: true }),
+      ).toBeVisible();
+    });
+
+    test("percent-encodes a recipient that would otherwise append a mail header", async ({
+      page,
+    }) => {
+      await page.getByRole("button", { name: "Email" }).click();
+      await page
+        .getByPlaceholder("hello@frontsail.ai")
+        .fill("hi@example.com?bcc=lurker@example.net");
+
+      await expect(
+        page.getByText("mailto:hi@example.com%3Fbcc=lurker@example.net", { exact: true }),
+      ).toBeVisible();
+    });
+  });
+
   test.describe("Text QR Code", () => {
     test("should switch to text form with character counter", async ({ page }) => {
       await page.getByRole("button", { name: "Text" }).click();

@@ -12,14 +12,56 @@ type FormatterMap = {
   [K in QRType]: (data: FormDataMap[K]) => string;
 };
 
+/* Percent-encodes the characters that may not appear raw in a URI (RFC 3986
+   §2): everything outside printable ASCII, the handful of printable ones
+   STD 66 excludes, and a `%` that does not already introduce an escape —
+   encoding that one unconditionally would turn a hand-typed `%20` into
+   `%2520`. Reserved delimiters are deliberately left alone, so a URL keeps
+   the structure the user typed; the callers that need a delimiter neutralised
+   pass it in `extra`.
+
+   The `u` flag is load-bearing: without it the negated class matches lone
+   surrogates, and encoding half a code point produces mojibake. */
+const uriUnsafe = (extra = "") =>
+  new RegExp(`%(?![0-9A-Fa-f]{2})|[^\\x21-\\x7E]|["<>\\\\^\`{|}]${extra}`, "gu");
+
+const encodeUriUnsafe = (value: string, extra?: string): string =>
+  value.replace(uriUnsafe(extra), (ch) => encodeURIComponent(ch));
+
+/* RFC 3966 §3: `visual-separator = "-" / "." / "(" / ")"`, and the space is
+   pointedly not one of them — the spec says tel URIs "MUST NOT use spaces in
+   visual separators". So stripping spaces while keeping `()-.` is not an
+   inconsistency to tidy up (#44): it is exactly what the grammar asks for,
+   and the separators carry the formatting the user typed. `*` and `#` ride
+   along because the local-number grammar admits them (`*67`, `#31#`).
+
+   Anything else — the letters of a vanity number, an "ext." suffix, or a `;`
+   that would open a tel URI parameter — cannot be represented, and there is
+   no safe way to drop it: deleting the letters from "ext. 89" leaves ".89",
+   whose `.` is a visual separator, yielding a perfectly valid URI that dials
+   a different number. Silently plausible output is this project's
+   characteristic bug, so an unrepresentable number encodes nothing instead. */
+const TEL_SUBSCRIBER = /^\+?[0-9.()*#-]+$/;
+
+function normalizePhoneNumber(raw: string): string {
+  // A pasted `tel:` link would otherwise be prefixed a second time
+  const number = (raw || "").replace(/\s+/g, "").replace(/^tel:/i, "");
+  if (!TEL_SUBSCRIBER.test(number)) return "";
+  // `global-number-digits` requires at least one DIGIT; separators alone are not a number
+  return /[0-9]/.test(number) ? number : "";
+}
+
 const formatters: FormatterMap = {
   url: (data: URLFormData) => {
     const url = (data.url || "").trim();
     if (!url) return "";
-    if (!url.match(/^https?:\/\//i)) {
-      return `https://${url}`;
-    }
-    return url;
+    const absolute = url.match(/^https?:\/\//i) ? url : `https://${url}`;
+    /* Encoded rather than run through `new URL()`, which #43 suggested: that
+       class is a type error here (the package's tsconfig omits the DOM lib),
+       and `href` also lowercases the host, drops default ports and appends a
+       root path — rewriting parts of the URL the user did not ask us to
+       touch. Encoding fixes the raw spaces without the collateral. */
+    return encodeUriUnsafe(absolute);
   },
 
   email: (data: EmailFormData) => {
@@ -30,17 +72,26 @@ const formatters: FormatterMap = {
     const subject = (data.subject || "").trim();
     const body = (data.body || "").trim();
     if (!to) return "";
+    /* The recipient is a URI component too, not a value we can paste in raw.
+       RFC 6068 §2 wants the gen-delims other than "@" and ":" percent-encoded
+       here — without that, a recipient of `a@b.com?bcc=x@y.com` closes the
+       addr-spec and appends a header, so a scanned code silently blind-copies
+       a third party. `&` goes with them: it only delimits once a `?` has
+       opened the header list, but lenient clients have been known to split on
+       it anyway, and it round-trips for the addresses where it is legitimate
+       atext. "@" and ":" stay literal — the address needs them. */
+    const recipient = encodeUriUnsafe(to, "|[/?#\\[\\]&]");
     /* Built by hand rather than with `URLSearchParams`: that class emits
        form-encoding (spaces as `+`), which mail clients render literally in
        mailto links. RFC 6068 wants percent-encoding (`%20`). */
     const parts: string[] = [];
     if (subject) parts.push(`subject=${encodeURIComponent(subject)}`);
     if (body) parts.push(`body=${encodeURIComponent(body)}`);
-    return `mailto:${to}${parts.length > 0 ? `?${parts.join("&")}` : ""}`;
+    return `mailto:${recipient}${parts.length > 0 ? `?${parts.join("&")}` : ""}`;
   },
 
   phone: (data: PhoneFormData) => {
-    const number = (data.number || "").replace(/\s+/g, "");
+    const number = normalizePhoneNumber(data.number);
     return number ? `tel:${number}` : "";
   },
 
@@ -63,9 +114,11 @@ const formatters: FormatterMap = {
         .replace(/,/g, "\\,")
         .replace(/\r?\n/g, "\\n");
 
-    /* TEL, EMAIL and URL are phone-number/URI values, not TEXT — backslash
-       escapes would corrupt them. Control characters (the injection vector)
-       have no business in any of them, so they are dropped instead. */
+    /* EMAIL and URL are URI values, not TEXT — backslash escapes would
+       corrupt them. Control characters (the injection vector) have no
+       business in either, so they are dropped instead. TEL goes through
+       `normalizePhoneNumber`, which admits no control character to begin
+       with. */
     // oxlint-disable-next-line no-control-regex -- matching control chars is the point
     const stripControl = (value: string): string => value.replace(/[\u0000-\u001F\u007F]/g, "");
 
@@ -91,7 +144,12 @@ const formatters: FormatterMap = {
 
     if (org) lines.push(`ORG:${escapeText(org)}`);
     if (title) lines.push(`TITLE:${escapeText(title)}`);
-    if (phone) lines.push(`TEL:${stripControl(phone)}`);
+    /* Same normalization as the `phone` type: one notion of what a phone
+       number is, not two that drift. The failure handling differs because the
+       scope does — a card is more than its TEL, so an unrepresentable number
+       drops its line rather than blanking the whole vCard. */
+    const tel = normalizePhoneNumber(phone);
+    if (tel) lines.push(`TEL:${tel}`);
     if (email) lines.push(`EMAIL:${stripControl(email)}`);
     if (website) {
       const uri = stripControl(website);
@@ -114,7 +172,7 @@ const formatters: FormatterMap = {
 
    `?? ""` guards saved configs restored from localStorage that predate a
    field, which arrive with it missing rather than blank. */
-function hasAnyContent(data: FormDataMap[QRType]): boolean {
+export function hasAnyContent(data: FormDataMap[QRType]): boolean {
   return Object.values(data).some((value: string) => (value ?? "").trim() !== "");
 }
 
