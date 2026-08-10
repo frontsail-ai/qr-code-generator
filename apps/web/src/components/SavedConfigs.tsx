@@ -1,4 +1,5 @@
 import { QrCode, RotateCcw, Share2, Trash2, X } from "lucide-react";
+import { useEffect, useState } from "react";
 import { useIsDesktop } from "../hooks/useMediaQuery";
 import type { SavedConfig } from "@frontsail/qr-core";
 import { formatQRData } from "@frontsail/qr-core";
@@ -28,7 +29,10 @@ function summarize(config: SavedConfig): string {
 interface ConfigCardProps {
   config: SavedConfig;
   onRestore: (config: SavedConfig) => void;
-  onDelete: (id: string) => void;
+  /* The whole entry, not its id: undoing the delete has to put this exact
+     value back, and by the time the toast's action runs it is no longer in
+     any list to look up. */
+  onDelete: (config: SavedConfig) => void;
   onShare: (config: SavedConfig) => void;
 }
 
@@ -81,7 +85,7 @@ function ConfigCard({ config, onRestore, onDelete, onShare }: ConfigCardProps) {
             icon={Trash2}
             variant="outline"
             title="Delete"
-            onClick={() => onDelete(config.id)}
+            onClick={() => onDelete(config)}
           />
         </div>
       </div>
@@ -102,9 +106,56 @@ function ConfigCard({ config, onRestore, onDelete, onShare }: ConfigCardProps) {
           title="Copy shareable link"
           onClick={() => onShare(config)}
         />
-        <IconButton icon={Trash2} size="sm" title="Delete" onClick={() => onDelete(config.id)} />
+        <IconButton icon={Trash2} size="sm" title="Delete" onClick={() => onDelete(config)} />
       </div>
     </div>
+  );
+}
+
+/* How long an armed "Clear all" waits before standing down. Long enough to
+   read and answer, short enough that it is never still armed by the time some
+   unrelated click lands on it. */
+const CONFIRM_WINDOW_MS = 4000;
+
+/* Two-step "Clear all".
+ *
+ * Every other destructive control in the app settles for an undo toast, which
+ * is the right trade when the mistake costs one entry. This one can cost
+ * months of them at once, so it asks first *and* offers the undo — the blast
+ * radius, not the gesture, is what earns the extra step. The confirm is inline
+ * because `no-alert` forbids the native one, and a modal for a single button
+ * would be heavier than what it guards. */
+function ClearAllButton({ onClearAll }: { onClearAll: () => void }) {
+  const [armed, setArmed] = useState(false);
+
+  useEffect(() => {
+    if (!armed) return;
+    const timeout = setTimeout(() => setArmed(false), CONFIRM_WINDOW_MS);
+    return () => clearTimeout(timeout);
+  }, [armed]);
+
+  return (
+    <button
+      type="button"
+      /* The visible word is "Confirm?", which on its own tells a screen-reader
+         user nothing about what they are confirming. */
+      aria-label={armed ? "Confirm clearing all history" : "Clear all"}
+      onClick={() => {
+        if (!armed) {
+          setArmed(true);
+          return;
+        }
+        setArmed(false);
+        onClearAll();
+      }}
+      className={`text-xs bg-transparent border-none cursor-pointer px-1.5 py-1 rounded-[2px] transition-colors duration-[140ms] ${
+        armed
+          ? "font-semibold text-[var(--signal-error-500)] bg-[var(--signal-error-50)]"
+          : "text-[var(--text-muted)] hover:text-[var(--signal-error-500)] hover:bg-[var(--ink-100)]"
+      }`}
+    >
+      {armed ? "Confirm?" : "Clear all"}
+    </button>
   );
 }
 
@@ -152,7 +203,7 @@ function AnalyticsToggle({ enabled, onChange }: AnalyticsToggleProps) {
 interface SavedConfigsProps {
   configs: SavedConfig[];
   onRestore: (config: SavedConfig) => void;
-  onDelete: (id: string) => void;
+  onDelete: (config: SavedConfig) => void;
   onShare: (config: SavedConfig) => void;
   onClearAll: () => void;
   onClose?: () => void;
@@ -181,15 +232,7 @@ export function SavedConfigs({
           {configs.length > 0 && <Badge variant="neutral">{configs.length}</Badge>}
         </span>
         <span className="flex items-center gap-1">
-          {configs.length > 0 && (
-            <button
-              type="button"
-              onClick={onClearAll}
-              className="text-xs text-[var(--text-muted)] bg-transparent border-none cursor-pointer px-1.5 py-1 rounded-[2px] transition-colors duration-[140ms] hover:text-[var(--signal-error-500)] hover:bg-[var(--ink-100)]"
-            >
-              Clear all
-            </button>
-          )}
+          {configs.length > 0 && <ClearAllButton onClearAll={onClearAll} />}
           {onClose && <IconButton icon={X} title="Close history" onClick={onClose} />}
         </span>
       </div>

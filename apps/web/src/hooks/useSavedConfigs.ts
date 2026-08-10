@@ -29,6 +29,8 @@ interface UseSavedConfigsReturn {
   saveConfig: (config: SaveConfigInput) => void;
   deleteConfig: (id: string) => void;
   clearAllConfigs: () => void;
+  insertConfig: (config: SavedConfig, index: number) => void;
+  restoreConfigs: (configs: SavedConfig[]) => void;
 }
 
 export function useSavedConfigs(): UseSavedConfigsReturn {
@@ -77,10 +79,34 @@ export function useSavedConfigs(): UseSavedConfigsReturn {
     setSavedConfigs([]);
   }, []);
 
+  /* Undoing a delete puts the entry back where it was. Re-adding it at the top
+     would make an undone mistake look like a fresh save, leaving the user with
+     a history they never had. The id guard covers the case where the same
+     design was saved again inside the undo window. */
+  const insertConfig = useCallback((config: SavedConfig, index: number) => {
+    setSavedConfigs((prev) =>
+      prev.some((c) => c.id === config.id)
+        ? prev
+        : [...prev.slice(0, index), config, ...prev.slice(index)],
+    );
+  }, []);
+
+  /* The snapshot says what was cleared, not what history is allowed to hold —
+     anything saved during the undo window is newer, so it stays and stays on
+     top. */
+  const restoreConfigs = useCallback((configs: SavedConfig[]) => {
+    setSavedConfigs((prev) => [
+      ...prev,
+      ...configs.filter((c) => !prev.some((p) => p.id === c.id)),
+    ]);
+  }, []);
+
   return {
     savedConfigs,
     saveConfig,
     deleteConfig,
     clearAllConfigs,
+    insertConfig,
+    restoreConfigs,
   };
 }

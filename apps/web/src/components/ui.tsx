@@ -1,5 +1,6 @@
-import { TriangleAlert, type LucideIcon } from "lucide-react";
+import { Check, Link as LinkIcon, RotateCcw, TriangleAlert, type LucideIcon } from "lucide-react";
 import type { ButtonHTMLAttributes, ReactNode, Ref } from "react";
+import type { ToastKind, ToastState } from "../types";
 
 /* Plico primitives — see src/styles/plico.css for the token set. */
 
@@ -119,6 +120,54 @@ interface NoteProps {
   className?: string;
   ref?: Ref<HTMLDivElement>;
   children: ReactNode;
+}
+
+const TOAST_ICONS: Record<ToastKind, LucideIcon> = {
+  copy: LinkIcon,
+  save: Check,
+  undo: RotateCcw,
+};
+
+interface ToastProps {
+  toast: ToastState | null;
+  visible: boolean;
+  onAction: () => void;
+}
+
+/* Bottom-centre status strip — the app's one channel for saying what just
+   happened, and the only place an undo can live.
+ *
+ * The node stays mounted so the fade runs both ways, which makes it a live
+ * region rather than something announced by appearing. The action button is
+ * the exception: it is rendered only while the strip is visible, because a
+ * button sitting at `opacity: 0` is still a tab stop and still counts as
+ * visible to Playwright — an invisible control that both keyboards and tests
+ * can reach is worse than no control.
+ */
+export function Toast({ toast, visible, onAction }: ToastProps) {
+  const Icon = TOAST_ICONS[toast?.kind ?? "save"];
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      data-testid="toast"
+      className={`fixed bottom-[calc(6rem+var(--consent-inset))] lg:bottom-[calc(1.5rem+var(--consent-inset))] left-1/2 -translate-x-1/2 z-30 py-2.5 bg-[var(--ink-900)] text-[var(--paper-0)] text-[13px] font-medium rounded-[2px] shadow-[var(--shadow-lg)] flex items-center gap-2.5 transition-all duration-[220ms] ${
+        toast?.action ? "pl-4 pr-2" : "px-4"
+      } ${visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2 pointer-events-none"}`}
+    >
+      <Icon className="w-[15px] h-[15px] shrink-0" aria-hidden />
+      {toast?.text}
+      {visible && toast?.action && (
+        <button
+          type="button"
+          onClick={onAction}
+          className="bg-transparent border-none cursor-pointer px-2 py-1 -my-1 rounded-[2px] text-[13px] font-semibold text-[var(--paper-0)] underline underline-offset-2 decoration-[color-mix(in_srgb,var(--paper-0)_45%,transparent)] transition-colors duration-[140ms] hover:bg-[color-mix(in_srgb,var(--paper-0)_16%,transparent)]"
+        >
+          {toast.action.label}
+        </button>
+      )}
+    </div>
+  );
 }
 
 /* Inline advisory strip — the app's answer to a native alert(). Icon takes the
