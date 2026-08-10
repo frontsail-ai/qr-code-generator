@@ -200,6 +200,34 @@ test.describe("QR Code Generator", () => {
       const qrPreview = page.locator("section").first();
       await expect(qrPreview.locator("svg").first()).toBeVisible();
     });
+
+    test("an untouched vCard form has nothing to encode", async ({ page }) => {
+      /* The vCard wrapper (BEGIN/VERSION/END) used to count as content, so an
+         empty form read as READY and unlocked exports on a card carrying no
+         contact at all. Every other type shows the empty state here. */
+      await page.getByRole("button", { name: "vCard" }).click();
+      await page.waitForTimeout(400);
+
+      await expect(page.getByText("Nothing to encode yet")).toBeVisible();
+      await expect(page.getByRole("button", { name: "Download PNG" })).toBeDisabled();
+      await expect(page.getByRole("button", { name: "Download SVG" })).toBeDisabled();
+      await expect(page.getByText("EMPTY")).toBeVisible();
+    });
+
+    test("whitespace alone is not vCard content, but one real field is", async ({ page }) => {
+      await page.getByRole("button", { name: "vCard" }).click();
+      await page.getByPlaceholder("Company Inc.").fill("   ");
+      await page.waitForTimeout(400);
+
+      await expect(page.getByText("Nothing to encode yet")).toBeVisible();
+      await expect(page.getByRole("button", { name: "Download PNG" })).toBeDisabled();
+
+      await page.getByPlaceholder("Company Inc.").fill("Acme");
+      await page.waitForTimeout(400);
+
+      await expect(page.getByText("Nothing to encode yet")).toBeHidden();
+      await expect(page.getByRole("button", { name: "Download PNG" })).toBeEnabled();
+    });
   });
 
   test.describe("Color Customization", () => {
