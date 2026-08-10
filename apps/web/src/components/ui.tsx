@@ -1,5 +1,5 @@
 import { Check, Link as LinkIcon, RotateCcw, TriangleAlert, type LucideIcon } from "lucide-react";
-import type { ButtonHTMLAttributes, ReactNode, Ref } from "react";
+import { useRef, type ButtonHTMLAttributes, type ReactNode, type Ref } from "react";
 import type { ToastKind, ToastState } from "../types";
 
 /* Plico primitives — see src/styles/plico.css for the token set. */
@@ -126,45 +126,70 @@ interface NoteProps {
 const TOAST_ICONS: Record<ToastKind, LucideIcon> = {
   copy: LinkIcon,
   save: Check,
-  undo: RotateCcw,
 };
 
 interface ToastProps {
   toast: ToastState | null;
-  visible: boolean;
-  onAction: () => void;
+  toastVisible: boolean;
+  undoLabel: string | null;
+  onUndo: () => void;
 }
 
-/* Bottom-centre status strip — the app's one channel for saying what just
-   happened, and the only place an undo can live.
+/* Bottom-centre status strip, drawing whichever of two independent things is
+   current: a transient message, or a pending undo offer.
+ *
+ * A message wins while it is on screen because it is the newer, briefer event
+ * — but it only *covers* the offer, it does not end it. The offer comes back
+ * for the rest of its window once the message has said its piece. That
+ * separation is the whole point: while the action lived inside the message,
+ * "Link copied to clipboard" could permanently destroy the take-back for a
+ * delete that happened half a second earlier (#57).
  *
  * The node stays mounted so the fade runs both ways, which makes it a live
- * region rather than something announced by appearing. The action button is
- * the exception: it is rendered only while the strip is visible, because a
- * button sitting at `opacity: 0` is still a tab stop and still counts as
- * visible to Playwright — an invisible control that both keyboards and tests
- * can reach is worse than no control.
+ * region rather than something announced by appearing. The Undo button is the
+ * exception: it is rendered only when actually offered, because a button
+ * parked at `opacity: 0` is still a tab stop and still counts as visible to
+ * Playwright — an invisible control that both keyboards and tests can reach is
+ * worse than no control.
  */
-export function Toast({ toast, visible, onAction }: ToastProps) {
-  const Icon = TOAST_ICONS[toast?.kind ?? "save"];
+export function Toast({ toast, toastVisible, undoLabel, onUndo }: ToastProps) {
+  const showingMessage = toastVisible && toast !== null;
+  const showingUndo = !showingMessage && undoLabel !== null;
+  const visible = showingMessage || showingUndo;
+  const current = showingMessage
+    ? { Icon: TOAST_ICONS[toast.kind], text: toast.text }
+    : showingUndo
+      ? { Icon: RotateCcw, text: undoLabel }
+      : null;
+
+  /* Hold the last thing said so the strip fades out with its words still in
+     it. Dropping them the instant the offer expires empties the box a fifth of
+     a second before it disappears, which reads as a glitch rather than a
+     dismissal. Writing the same value twice is harmless, so a render-phase
+     assignment is safe here. */
+  const lastRef = useRef(current);
+  if (current) lastRef.current = current;
+  const shown = current ?? lastRef.current;
+  const Icon = shown?.Icon ?? RotateCcw;
+
   return (
     <div
       role="status"
       aria-live="polite"
       data-testid="toast"
       className={`fixed bottom-[calc(6rem+var(--consent-inset))] lg:bottom-[calc(1.5rem+var(--consent-inset))] left-1/2 -translate-x-1/2 z-30 py-2.5 bg-[var(--ink-900)] text-[var(--paper-0)] text-[13px] font-medium rounded-[2px] shadow-[var(--shadow-lg)] flex items-center gap-2.5 transition-all duration-[220ms] ${
-        toast?.action ? "pl-4 pr-2" : "px-4"
+        showingUndo ? "pl-4 pr-2" : "px-4"
       } ${visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2 pointer-events-none"}`}
     >
       <Icon className="w-[15px] h-[15px] shrink-0" aria-hidden />
-      {toast?.text}
-      {visible && toast?.action && (
+      {shown?.text}
+      {showingUndo && (
         <button
           type="button"
-          onClick={onAction}
+          onClick={onUndo}
           className="bg-transparent border-none cursor-pointer px-2 py-1 -my-1 rounded-[2px] text-[13px] font-semibold text-[var(--paper-0)] underline underline-offset-2 decoration-[color-mix(in_srgb,var(--paper-0)_45%,transparent)] transition-colors duration-[140ms] hover:bg-[color-mix(in_srgb,var(--paper-0)_16%,transparent)]"
         >
-          {toast.action.label}
+          Undo
         </button>
       )}
     </div>
