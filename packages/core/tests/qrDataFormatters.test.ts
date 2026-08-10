@@ -19,6 +19,46 @@ describe("url", () => {
     expect(formatQRData("url", { url: "  example.com  " })).toBe("https://example.com");
   });
 
+  // #43 — raw spaces make the payload an invalid URI, and scanners diverge on it
+  test("percent-encodes interior spaces", () => {
+    expect(formatQRData("url", { url: "frontsail.ai/some page?q=a b" })).toBe(
+      "https://frontsail.ai/some%20page?q=a%20b",
+    );
+  });
+
+  test("percent-encodes the other characters STD 66 excludes", () => {
+    expect(formatQRData("url", { url: 'example.com/a"b<c>d^e`f{g}h|i\\j' })).toBe(
+      "https://example.com/a%22b%3Cc%3Ed%5Ee%60f%7Bg%7Dh%7Ci%5Cj",
+    );
+  });
+
+  test("percent-encodes non-ASCII as UTF-8, astral characters included", () => {
+    expect(formatQRData("url", { url: "example.com/ünï" })).toBe(
+      "https://example.com/%C3%BCn%C3%AF",
+    );
+    expect(formatQRData("url", { url: "example.com/🎉" })).toBe("https://example.com/%F0%9F%8E%89");
+  });
+
+  /* Reserved delimiters keep the structure the user typed, and an escape they
+     typed themselves is not escaped a second time into %2520. */
+  test("leaves reserved delimiters and existing escapes alone", () => {
+    expect(formatQRData("url", { url: "https://example.com/a%20b?x=1&y=2#frag" })).toBe(
+      "https://example.com/a%20b?x=1&y=2#frag",
+    );
+  });
+
+  test("encodes a lone percent that introduces no escape", () => {
+    expect(formatQRData("url", { url: "example.com/100%" })).toBe("https://example.com/100%25");
+  });
+
+  /* `new URL().href` would return "https://example.com/x" here, quietly
+     dropping the port and appending a root path the user did not type. */
+  test("does not rewrite the host, port or path the user typed", () => {
+    expect(formatQRData("url", { url: "https://Example.COM:443/Path" })).toBe(
+      "https://Example.COM:443/Path",
+    );
+  });
+
   test("returns empty for empty input", () => {
     expect(formatQRData("url", { url: "   " })).toBe("");
   });
@@ -62,6 +102,33 @@ describe("email", () => {
   test("returns empty without a recipient", () => {
     expect(formatQRData("email", { to: "", subject: "Hi", body: "There" })).toBe("");
   });
+
+  /* The recipient is a URI component too. Left raw, a "?" in it closes the
+     addr-spec and everything after becomes headers — so a scanned code would
+     blind-copy an address the sender never seeded. */
+  test("percent-encodes a recipient that tries to open a header list", () => {
+    expect(
+      formatQRData("email", { to: "hi@example.com?bcc=lurker@example.net", subject: "", body: "" }),
+    ).toBe("mailto:hi@example.com%3Fbcc=lurker@example.net");
+  });
+
+  test("percent-encodes a recipient that tries to append a header", () => {
+    expect(
+      formatQRData("email", { to: "hi@example.com&cc=lurker@example.net", subject: "", body: "" }),
+    ).toBe("mailto:hi@example.com%26cc=lurker@example.net");
+  });
+
+  test("percent-encodes the gen-delims RFC 6068 names, and keeps @ and :", () => {
+    expect(formatQRData("email", { to: "a/b#c[d]@example.com", subject: "", body: "" })).toBe(
+      "mailto:a%2Fb%23c%5Bd%5D@example.com",
+    );
+  });
+
+  test("percent-encodes interior whitespace in a recipient", () => {
+    expect(formatQRData("email", { to: "hi there@example.com", subject: "", body: "" })).toBe(
+      "mailto:hi%20there@example.com",
+    );
+  });
 });
 
 describe("phone", () => {
@@ -71,6 +138,39 @@ describe("phone", () => {
 
   test("returns empty for empty input", () => {
     expect(formatQRData("phone", { number: "   " })).toBe("");
+  });
+
+  /* RFC 3966 §3 lists exactly "-", ".", "(" and ")" as visual separators and
+     excludes the space, so this is the conformant output, not a half-done
+     normalization (#44). */
+  test("keeps RFC 3966 visual separators", () => {
+    expect(formatQRData("phone", { number: "+1 (555) 123-4567" })).toBe("tel:+1(555)123-4567");
+    expect(formatQRData("phone", { number: "555.123.4567" })).toBe("tel:555.123.4567");
+  });
+
+  test("keeps the * and # that the local-number grammar admits", () => {
+    expect(formatQRData("phone", { number: "*67 555 1234" })).toBe("tel:*675551234");
+    expect(formatQRData("phone", { number: "#31# 555 1234" })).toBe("tel:#31#5551234");
+  });
+
+  test("does not prefix a number that already arrived as a tel: URI", () => {
+    expect(formatQRData("phone", { number: "tel:+15551234567" })).toBe("tel:+15551234567");
+  });
+
+  /* Each of these encodes nothing rather than something plausible. Dropping
+     the offending characters instead would turn "ext. 89" into ".89", a valid
+     URI that dials a different number. */
+  test.each([
+    ["a spelled-out extension", "+1 555 123 4567 ext. 89"],
+    ["a vanity number", "+1-555-CALL-NOW"],
+    ["a shorthand extension", "555 123 4567 x89"],
+    ["a tel URI parameter", "+1 555 123 4567;ext=99"],
+    ["a stray delimiter", "+1 555/123/4567"],
+    ["non-ASCII digits", "+١ ٥٥٥ ١٢٣"],
+    ["markup", "+1 555 123 4567 <script>"],
+    ["separators with no digit at all", "()-."],
+  ])("refuses to encode %s", (_label, number) => {
+    expect(formatQRData("phone", { number })).toBe("");
   });
 });
 
@@ -196,17 +296,35 @@ describe("vcard", () => {
     expect(out).toContain("N:B\\nNOTE:injected;A");
   });
 
-  test("strips control characters from the phone-number and URI-valued fields", () => {
+  test("strips control characters from the URI-valued fields", () => {
     const out = formatQRData("vcard", {
       ...emptyVCard,
-      phone: "+44\r\nNOTE:x",
       email: "a@b.co\u0000",
       website: "example.org\nNOTE:y",
     });
-    expect(out).toContain("TEL:+44NOTE:x");
     expect(out).toContain("EMAIL:a@b.co");
     expect(out).toContain("URL:https://example.orgNOTE:y");
     expect(out.split("\r\n").filter((line) => line.startsWith("NOTE:"))).toEqual([]);
+  });
+
+  /* TEL now runs through the same normalization as the `phone` type, which
+     admits no letter and so no smuggled property name. The line is dropped
+     whole rather than emitted as the junk number `+44NOTE:x`. */
+  test("drops a TEL line whose number cannot be represented, keeping the card", () => {
+    const out = formatQRData("vcard", {
+      ...emptyVCard,
+      firstName: "Ada",
+      phone: "+44\r\nNOTE:x",
+    });
+    expect(out).toContain("FN:Ada");
+    expect(out.split("\r\n").filter((line) => line.startsWith("TEL:"))).toEqual([]);
+    expect(out.split("\r\n").filter((line) => line.startsWith("NOTE:"))).toEqual([]);
+  });
+
+  test("normalizes TEL exactly as the phone type does", () => {
+    const out = formatQRData("vcard", { ...emptyVCard, phone: "+1 (555) 123-4567" });
+    expect(out).toContain("TEL:+1(555)123-4567");
+    expect(formatQRData("phone", { number: "+1 (555) 123-4567" })).toBe("tel:+1(555)123-4567");
   });
 
   test("delimits content lines with CRLF (RFC 2426 \u00a74)", () => {

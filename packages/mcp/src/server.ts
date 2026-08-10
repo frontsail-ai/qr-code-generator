@@ -1,6 +1,7 @@
 import { writeFile } from "node:fs/promises";
 import { isAbsolute } from "node:path";
-import { encodeDesignToUrl, formatQRData } from "@frontsail/qr-core";
+import { encodeDesignToUrl, formatQRData, hasAnyContent } from "@frontsail/qr-core";
+import type { FormDataMap } from "@frontsail/qr-core";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
@@ -41,16 +42,28 @@ async function guard(run: () => Promise<CallToolResult>): Promise<CallToolResult
   }
 }
 
+/* An empty payload has two causes, and naming the wrong one sends the caller
+   looking in the wrong place: the form may hold nothing, or it may hold
+   something no valid payload can represent — a phone number carrying an
+   "ext." suffix, say. `verb` differs per tool ("encode" / "share"); the
+   diagnosis does not. */
+function encodeOrThrow(type: DesignInput["content_type"], formData: FormDataMap, verb: string) {
+  const data = formatQRData(type, formData[type]);
+  if (data) return data;
+  throw new InputError(
+    hasAnyContent(formData[type])
+      ? `The ${type} content cannot be encoded as a ${type} payload. Check it for characters ` +
+          `the format does not allow — a phone number, for instance, may hold only digits, a ` +
+          `leading "+", "*", "#" and the separators "-.()".`
+      : `The ${type} content is empty, so there is nothing to ${verb}.`,
+  );
+}
+
 async function buildDesign(input: DesignInput) {
   const formData = toFormData(input);
   const logo = await resolveLogo(input.customization?.logo);
   const customization = toCustomization(input.customization, logo);
-  const data = formatQRData(input.content_type, formData[input.content_type]);
-  if (!data) {
-    throw new InputError(
-      `The ${input.content_type} content is empty, so there is nothing to encode.`,
-    );
-  }
+  const data = encodeOrThrow(input.content_type, formData, "encode");
   return { formData, customization, data };
 }
 
@@ -142,12 +155,7 @@ export function createServer(): McpServer {
         // Deliberately no logo: encodeDesignToUrl strips it, and resolving a
         // file path here would only produce bytes that get discarded.
         const customization = toCustomization(design.customization, null);
-        const data = formatQRData(design.content_type, formData[design.content_type]);
-        if (!data) {
-          throw new InputError(
-            `The ${design.content_type} content is empty, so there is nothing to share.`,
-          );
-        }
+        encodeOrThrow(design.content_type, formData, "share");
         const url = encodeDesignToUrl(design.content_type, formData, customization, SHARE_BASE_URL);
         return { content: [{ type: "text", text: url }] };
       }),
