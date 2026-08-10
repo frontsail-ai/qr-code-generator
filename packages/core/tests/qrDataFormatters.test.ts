@@ -106,7 +106,7 @@ describe("vcard", () => {
         "EMAIL:ada@example.com",
         "URL:https://example.com",
         "END:VCARD",
-      ].join("\n"),
+      ].join("\r\n"),
     );
   });
 
@@ -135,7 +135,7 @@ describe("vcard", () => {
         title: "",
         website: "",
       }),
-    ).toBe(["BEGIN:VCARD", "VERSION:3.0", "ORG:Acme", "END:VCARD"].join("\n"));
+    ).toBe(["BEGIN:VCARD", "VERSION:3.0", "ORG:Acme", "END:VCARD"].join("\r\n"));
   });
 
   test("still emits the name lines with only one half of the name", () => {
@@ -149,6 +149,66 @@ describe("vcard", () => {
         title: "",
         website: "",
       }),
-    ).toBe(["BEGIN:VCARD", "VERSION:3.0", "N:;Ada", "FN:Ada", "END:VCARD"].join("\n"));
+    ).toBe(["BEGIN:VCARD", "VERSION:3.0", "N:;Ada", "FN:Ada", "END:VCARD"].join("\r\n"));
+  });
+
+  const emptyVCard = {
+    firstName: "",
+    lastName: "",
+    phone: "",
+    email: "",
+    org: "",
+    title: "",
+    website: "",
+  };
+
+  test("escapes semicolons so they cannot shift the N components (RFC 2426 \u00a72.5)", () => {
+    const out = formatQRData("vcard", {
+      ...emptyVCard,
+      firstName: "Ada",
+      lastName: "Lovelace; PhD",
+    });
+    expect(out).toContain("N:Lovelace\\; PhD;Ada");
+    expect(out).toContain("FN:Ada Lovelace\\; PhD");
+  });
+
+  test("escapes commas in text values", () => {
+    expect(formatQRData("vcard", { ...emptyVCard, org: "Acme, Inc." })).toContain(
+      "ORG:Acme\\, Inc.",
+    );
+  });
+
+  test("escapes backslashes before any other escape", () => {
+    expect(formatQRData("vcard", { ...emptyVCard, firstName: "A", lastName: "B\\C" })).toContain(
+      "N:B\\\\C;A",
+    );
+  });
+
+  test("encodes newlines as literal \\n so a field cannot inject an extra property line", () => {
+    const out = formatQRData("vcard", {
+      ...emptyVCard,
+      firstName: "A",
+      lastName: "B\nNOTE:injected",
+    });
+    expect(out.split("\r\n").some((line) => line.startsWith("NOTE:"))).toBe(false);
+    expect(out).toContain("N:B\\nNOTE:injected;A");
+  });
+
+  test("strips control characters from the phone-number and URI-valued fields", () => {
+    const out = formatQRData("vcard", {
+      ...emptyVCard,
+      phone: "+44\r\nNOTE:x",
+      email: "a@b.co\u0000",
+      website: "example.org\nNOTE:y",
+    });
+    expect(out).toContain("TEL:+44NOTE:x");
+    expect(out).toContain("EMAIL:a@b.co");
+    expect(out).toContain("URL:https://example.orgNOTE:y");
+    expect(out.split("\r\n").filter((line) => line.startsWith("NOTE:"))).toEqual([]);
+  });
+
+  test("delimits content lines with CRLF (RFC 2426 \u00a74)", () => {
+    const out = formatQRData("vcard", { ...emptyVCard, org: "Acme" });
+    expect(out.split("\r\n")).toEqual(["BEGIN:VCARD", "VERSION:3.0", "ORG:Acme", "END:VCARD"]);
   });
 });
