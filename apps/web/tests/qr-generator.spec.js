@@ -629,6 +629,73 @@ test.describe("QR Code Generator", () => {
     });
   });
 
+  test.describe("Share Links", () => {
+    /* Capture the link the app itself produces rather than hard-coding an
+       encoded payload, so these stay honest if the codec changes. */
+    async function copyShareLink(page, { url, colorName }) {
+      await page.getByPlaceholder("frontsail.ai").fill(url);
+      await page.getByRole("button", { name: colorName }).first().click();
+      await page.waitForTimeout(400);
+
+      await page.evaluate(() => {
+        window.__copiedLink = null;
+        navigator.clipboard.writeText = (text) => {
+          window.__copiedLink = text;
+          return Promise.resolve();
+        };
+      });
+      await page.getByRole("button", { name: "Copy shareable link", exact: true }).click();
+      await expect.poll(() => page.evaluate(() => window.__copiedLink)).toContain("#s=");
+      return page.evaluate(() => window.__copiedLink);
+    }
+
+    test("applies a shared design that opens in an already-loaded tab", async ({ page }) => {
+      const link = await copyShareLink(page, {
+        url: "shared-design.example",
+        colorName: "#A63D30",
+      });
+
+      // Move away from the shared design so restoring it is observable
+      await page.getByPlaceholder("frontsail.ai").fill("something-else.example");
+      await page.getByRole("button", { name: "#2C4A8A" }).first().click();
+      await page.waitForTimeout(400);
+
+      /* A fragment-only navigation: the browser reuses the document, so
+         nothing re-mounts and the module-scope decode never re-runs */
+      await page.evaluate((href) => {
+        window.location.hash = new URL(href).hash;
+      }, link);
+
+      await expect(page.getByPlaceholder("frontsail.ai")).toHaveValue("shared-design.example");
+      await expect(page.locator('input[value="A63D30"]')).toBeVisible();
+      // The consumed link must not linger in the address bar
+      expect(page.url()).not.toContain("#s=");
+    });
+
+    test("clears the hash but keeps query parameters when a link opens cold", async ({ page }) => {
+      const link = await copyShareLink(page, { url: "cold-load.example", colorName: "#A63D30" });
+
+      const withQuery = link.replace("/#s=", "/?utm_source=newsletter#s=");
+      await page.goto(withQuery);
+
+      await expect(page.getByPlaceholder("frontsail.ai")).toHaveValue("cold-load.example");
+      expect(page.url()).not.toContain("#s=");
+      expect(page.url()).toContain("utm_source=newsletter");
+    });
+
+    test("discards a malformed share hash without disturbing the design", async ({ page }) => {
+      await page.getByPlaceholder("frontsail.ai").fill("keep-me.example");
+      await page.waitForTimeout(400);
+
+      await page.evaluate(() => {
+        window.location.hash = "#s=not-a-valid-payload";
+      });
+
+      await expect(page.getByPlaceholder("frontsail.ai")).toHaveValue("keep-me.example");
+      await expect.poll(() => page.url()).not.toContain("#s=");
+    });
+  });
+
   test.describe("Saved Configurations", () => {
     test.beforeEach(async ({ page }) => {
       // Clear localStorage before each test

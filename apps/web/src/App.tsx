@@ -46,12 +46,6 @@ function App() {
   const [toastVisible, setToastVisible] = useState(false);
   const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
-  useEffect(() => {
-    if (window.location.hash.startsWith("#s=")) {
-      history.replaceState(null, "", window.location.pathname);
-    }
-  }, []);
-
   const { savedConfigs, saveConfig, deleteConfig, clearAllConfigs } = useSavedConfigs();
   const { decision: consentDecision, setEnabled: setConsentEnabled } = useAnalyticsConsent();
   /* How much room the consent bar is currently stealing from the bottom of the
@@ -77,6 +71,42 @@ function App() {
     clearTimeout(toastTimeoutRef.current);
     toastTimeoutRef.current = setTimeout(() => setToastVisible(false), 2000);
   }, []);
+
+  /* The hash is a live input, not just a boot parameter. Opening a share link
+     from a tab that already has the app in it only changes the fragment, so
+     the browser reuses the document: nothing re-runs the module-scope decode
+     above and nothing re-mounts, which would leave the shared design
+     unapplied and its hash stranded in the address bar. Consuming it here on
+     every `hashchange` makes a share link behave the same whether it opens
+     cold or in place. */
+  useEffect(() => {
+    /* Reads the hash, strips it, and hands back whatever it encoded. The
+       hash goes either way: a link that has been applied is stale, and one
+       that fails to decode is junk. `search` is preserved — campaign
+       parameters on a shared link are not ours to discard. */
+    const consumeShareHash = () => {
+      if (!window.location.hash.startsWith("#s=")) return null;
+      const design = decodeDesignFromUrl(window.location.hash);
+      history.replaceState(null, "", window.location.pathname + window.location.search);
+      return design;
+    };
+
+    // A cold load's design was already decoded at module scope; drop its hash
+    consumeShareHash();
+
+    const handleHashChange = () => {
+      const design = consumeShareHash();
+      if (!design) return;
+      setQRType(design.qrType);
+      setFormData(design.formData);
+      setCustomization(design.customization);
+      // The design replaces what is on screen, so say so rather than swapping it silently
+      showToast("copy", "Shared design loaded");
+    };
+
+    window.addEventListener("hashchange", handleHashChange);
+    return () => window.removeEventListener("hashchange", handleHashChange);
+  }, [showToast]);
 
   const handleSave = useCallback(() => {
     saveConfig({
