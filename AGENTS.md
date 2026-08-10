@@ -23,6 +23,12 @@ Bun workspace monorepo:
 
 Rules for `packages/core`: it must stay framework-free and render nothing. Its tsconfig omits the DOM lib, so `window`/`document`/`localStorage` are type errors — pass browser values in as parameters instead (see `encodeDesignToUrl`). Its only dependency is `lz-string`. React-flavored types belong in `apps/web/src/types.ts`. User text entering a structured payload goes through that format's escaping rules, verified with hostile-input tests — raw interpolation is how the mailto form-encoding and vCard semicolon bugs shipped (see the `email` and `vcard` formatters for the pattern: percent-encoding per RFC 6068, backslash escapes and CRLF per RFC 2426).
 
+Rules for `apps/web`:
+
+- **User-facing failures are inline, never native dialogs.** `alert`/`confirm`/`prompt` are lint errors (`no-alert`, configured in the root `vite.config.js`). Render the `Note` primitive from `src/components/ui.tsx` instead — `variant="error"` with `role="alert"` for something the user just did.
+- **An input with more than one entry point has one intake, not one per entry.** The logo can arrive from the picker in the inspector or from a drop anywhere on the canvas; both go through `useLogoIntake`, which owns validation _and_ the rejection message. Sharing only the validator is what let the two paths drift into an `alert()` and a silent `return` for the same file (#37).
+- **A message rendered off-screen is a silent failure.** Playwright's `toBeVisible()` passes on a node scrolled out of the viewport, so assert `toBeInViewport()` for feedback that appears somewhere other than where the user acted.
+
 Rules for `skills/`:
 
 - **The plugin root is `skills/qr-code/`, not the repo root.** `.claude-plugin/marketplace.json` at the repo root points `source` at `./skills/qr-code`, which holds its own `.claude-plugin/plugin.json` and `SKILL.md` (the documented single-skill-at-plugin-root form). Pointing `source` at `"./"` also works and installs the whole monorepo — 345 MB, because the root `package.json` makes the installer run a dependency install. Keep the plugin root free of `package.json`.

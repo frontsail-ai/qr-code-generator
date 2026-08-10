@@ -1,36 +1,36 @@
-import { ImageUp, TriangleAlert } from "lucide-react";
+import { CircleAlert, ImageUp } from "lucide-react";
 import type { ChangeEvent } from "react";
-import { useRef } from "react";
-import { LogoValidationError, validateLogoImage } from "../../utils/validateLogoImage";
+import { useEffect, useRef } from "react";
+import { Note } from "../ui";
 
 interface LogoUploaderProps {
   value: string | null;
-  onChange: (value: string | null) => void;
+  /* Rejection message from the shared intake, or null. Covers files picked
+     here and files dropped on the canvas alike — see `useLogoIntake`. */
+  error: string | null;
+  onFile: (file: File | undefined) => void;
+  onRemove: () => void;
 }
 
-export function LogoUploader({ value, onChange }: LogoUploaderProps) {
+export function LogoUploader({ value, error, onFile, onRemove }: LogoUploaderProps) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const errorRef = useRef<HTMLDivElement>(null);
 
-  const handleFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    try {
-      onChange(await validateLogoImage(file));
-    } catch (err) {
-      alert(err instanceof LogoValidationError ? err.message : "Could not read the file");
-      // Allow re-selecting the same (rejected) file to retry
-      if (inputRef.current) {
-        inputRef.current.value = "";
-      }
+  /* A file dropped on the canvas is rejected over here in the inspector, which
+     on a short viewport is scrolled out of sight — an unseen error is the
+     silent failure this replaced. "nearest" keeps the nudge to the minimum,
+     and the jump is instant: a rejection is the one thing the user is waiting
+     on, so animating the panel toward it only delays the answer. */
+  useEffect(() => {
+    if (error) {
+      errorRef.current?.scrollIntoView({ block: "nearest" });
     }
-  };
+  }, [error]);
 
-  const handleRemove = () => {
-    onChange(null);
-    if (inputRef.current) {
-      inputRef.current.value = "";
-    }
+  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+    onFile(e.target.files?.[0]);
+    // Clear the input so re-picking the same (rejected) file fires onChange again
+    e.target.value = "";
   };
 
   return (
@@ -54,21 +54,13 @@ export function LogoUploader({ value, onChange }: LogoUploaderProps) {
             </span>
             <button
               type="button"
-              onClick={handleRemove}
+              onClick={onRemove}
               className="text-xs text-[var(--signal-error-500)] bg-transparent border-none cursor-pointer px-2 py-1 rounded-[2px] transition-colors duration-[140ms] hover:bg-[var(--signal-error-50)]"
             >
               Remove
             </button>
           </div>
-          <div className="flex items-start gap-2 px-2.5 py-2 bg-[var(--signal-warn-50)] rounded-[2px]">
-            <TriangleAlert
-              className="w-3.5 h-3.5 text-[var(--signal-warn-500)] shrink-0 mt-px"
-              aria-hidden
-            />
-            <span className="text-xs text-[var(--ink-700)] leading-[1.45]">
-              A logo covers part of the code. Test a scan before you print.
-            </span>
-          </div>
+          <Note>A logo covers part of the code. Test a scan before you print.</Note>
         </>
       ) : (
         <>
@@ -87,6 +79,14 @@ export function LogoUploader({ value, onChange }: LogoUploaderProps) {
             Tip — drop an image anywhere on the page
           </span>
         </>
+      )}
+
+      {/* Sits outside the branch above: a bad file can arrive while a good logo
+          is already set, and the rejection has to be visible either way */}
+      {error && (
+        <Note ref={errorRef} variant="error" icon={CircleAlert} role="alert">
+          {error}
+        </Note>
       )}
 
       <input

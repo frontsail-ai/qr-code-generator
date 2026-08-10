@@ -5,6 +5,29 @@ import { expect, test } from "@playwright/test";
 const ONE_BY_ONE_PNG_BASE64 =
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
 
+/* Drops a file on the canvas the way a user would. The app reads
+   `dataTransfer.files`, so the handle has to carry a real File — Playwright's
+   `setInputFiles` only covers the picker path, and the whole point of these
+   tests is that the two paths agree. */
+async function dropFileOnCanvas(page, { name, mimeType, base64, text }) {
+  const dataTransfer = await page.evaluateHandle(
+    ({ name, mimeType, base64, text }) => {
+      const bytes =
+        base64 === undefined
+          ? new TextEncoder().encode(text)
+          : Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
+      const transfer = new DataTransfer();
+      transfer.items.add(new File([bytes], name, { type: mimeType }));
+      return transfer;
+    },
+    { name, mimeType, base64, text },
+  );
+
+  const canvas = page.locator("main");
+  await canvas.dispatchEvent("dragover", { dataTransfer });
+  await canvas.dispatchEvent("drop", { dataTransfer });
+}
+
 test.describe("QR Code Generator", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("/");
@@ -454,6 +477,24 @@ test.describe("QR Code Generator", () => {
   });
 
   test.describe("Logo Upload", () => {
+    /* Native dialogs seen during the current test. Both logo paths used to
+       `alert()` on rejection, so "said nothing in a modal" is part of what
+       these tests assert — checked in afterEach rather than thrown from the
+       listener, where an async throw would only surface as a stray rejection. */
+    let nativeDialogs = [];
+
+    test.beforeEach(async ({ page }) => {
+      nativeDialogs = [];
+      page.on("dialog", async (dialog) => {
+        nativeDialogs.push(dialog.message());
+        await dialog.dismiss();
+      });
+    });
+
+    test.afterEach(() => {
+      expect(nativeDialogs, "the app must not open native dialogs").toEqual([]);
+    });
+
     test("should display logo upload area", async ({ page }) => {
       await expect(page.getByText("Logo — optional")).toBeVisible();
       await expect(page.getByText("Click to upload logo")).toBeVisible();
@@ -480,12 +521,6 @@ test.describe("QR Code Generator", () => {
     });
 
     test("should reject a corrupt image file at upload", async ({ page }) => {
-      let dialogMessage = null;
-      page.on("dialog", async (dialog) => {
-        dialogMessage = dialog.message();
-        await dialog.dismiss();
-      });
-
       await page.getByPlaceholder("frontsail.ai").fill("corrupt-test.com");
       await page.locator('input[type="file"]').setInputFiles({
         name: "corrupt.png",
@@ -493,14 +528,97 @@ test.describe("QR Code Generator", () => {
         buffer: Buffer.from("not an image at all, just bytes wearing a png name"),
       });
 
+      // The rejection is stated in the panel, not in a native dialog
+      await expect(page.getByRole("alert")).toContainText("not a readable image");
       // The file is rejected before it ever reaches the customization state
       await expect(page.getByText("Click to upload logo")).toBeVisible();
-      await expect.poll(() => dialogMessage).toContain("not a readable image");
 
       // The QR itself keeps rendering and exporting without the logo
       await page.waitForTimeout(400);
       await expect(page.locator("section svg").first()).toBeVisible();
       await expect(page.getByRole("button", { name: "Download PNG" })).toBeEnabled();
+    });
+
+    test("should reject a non-image file inline from the picker", async ({ page }) => {
+      await page.locator('input[type="file"]').setInputFiles({
+        name: "notes.txt",
+        mimeType: "text/plain",
+        buffer: Buffer.from("just some text"),
+      });
+
+      await expect(page.getByRole("alert")).toContainText("Please upload an image file");
+      await expect(page.getByText("Click to upload logo")).toBeVisible();
+    });
+
+    test("should give a dropped non-image the same message as the picker", async ({ page }) => {
+      /* Issue #37: the same file used to alert() through the picker and vanish
+         without a word through the drop zone. Same file, same answer. */
+      await dropFileOnCanvas(page, {
+        name: "notes.txt",
+        mimeType: "text/plain",
+        text: "just some text",
+      });
+
+      await expect(page.getByRole("alert")).toContainText("Please upload an image file");
+      /* The drop lands on the canvas but the answer is drawn in the inspector,
+         which starts scrolled past the logo panel. `toBeVisible` is satisfied
+         by a rendered-but-off-screen node, so assert the viewport explicitly —
+         a message the user never sees is the silent drop by another name. */
+      await expect(page.getByRole("alert")).toBeInViewport();
+      await expect(page.getByText("Click to upload logo")).toBeVisible();
+    });
+
+    test("should reject a corrupt dropped image inline", async ({ page }) => {
+      await dropFileOnCanvas(page, {
+        name: "corrupt.png",
+        mimeType: "image/png",
+        text: "bytes wearing a png name",
+      });
+
+      await expect(page.getByRole("alert")).toContainText("not a readable image");
+      await expect(page.getByText("Click to upload logo")).toBeVisible();
+    });
+
+    test("should accept a dropped image and clear a previous rejection", async ({ page }) => {
+      await page.getByPlaceholder("frontsail.ai").fill("drop-test.com");
+      await dropFileOnCanvas(page, {
+        name: "notes.txt",
+        mimeType: "text/plain",
+        text: "just some text",
+      });
+      await expect(page.getByRole("alert")).toBeVisible();
+
+      await dropFileOnCanvas(page, {
+        name: "logo.png",
+        mimeType: "image/png",
+        base64: ONE_BY_ONE_PNG_BASE64,
+      });
+
+      await expect(page.getByRole("button", { name: "Remove" })).toBeVisible();
+      await expect(page.getByRole("alert")).toBeHidden();
+      await expect(page.locator("section svg image").first()).toBeVisible();
+    });
+
+    test("should clear the rejection when the logo is removed", async ({ page }) => {
+      await dropFileOnCanvas(page, {
+        name: "logo.png",
+        mimeType: "image/png",
+        base64: ONE_BY_ONE_PNG_BASE64,
+      });
+      await expect(page.getByRole("button", { name: "Remove" })).toBeVisible();
+
+      // A bad file arriving while a good logo is set keeps the good one and says so
+      await dropFileOnCanvas(page, {
+        name: "notes.txt",
+        mimeType: "text/plain",
+        text: "just some text",
+      });
+      await expect(page.getByRole("alert")).toContainText("Please upload an image file");
+      await expect(page.getByRole("button", { name: "Remove" })).toBeVisible();
+
+      await page.getByRole("button", { name: "Remove" }).click();
+      await expect(page.getByRole("alert")).toBeHidden();
+      await expect(page.getByText("Click to upload logo")).toBeVisible();
     });
 
     test("should surface a render error when a stored corrupt logo stalls drawing", async ({
