@@ -1,5 +1,7 @@
 import { describe, expect, test } from "vite-plus/test";
+import { DEFAULT_FORM_DATA } from "../src/constants";
 import { formatQRData } from "../src/qrDataFormatters";
+import type { FormDataMap, QRType } from "../src/types";
 
 describe("url", () => {
   test("passes an absolute URL through untouched", () => {
@@ -210,5 +212,65 @@ describe("vcard", () => {
   test("delimits content lines with CRLF (RFC 2426 \u00a74)", () => {
     const out = formatQRData("vcard", { ...emptyVCard, org: "Acme" });
     expect(out.split("\r\n")).toEqual(["BEGIN:VCARD", "VERSION:3.0", "ORG:Acme", "END:VCARD"]);
+  });
+});
+
+describe("emptiness contract", () => {
+  /* Every consumer reads an empty string as "nothing to encode" — the web
+     app's empty state and export lock, the render hook, the MCP server's
+     error. The contract belongs to all formatters, so the cases are derived
+     from DEFAULT_FORM_DATA rather than hand-listed: a sixth QR type inherits
+     it the day it is added, not the day someone remembers to extend this
+     file. */
+  const types = Object.keys(DEFAULT_FORM_DATA) as QRType[];
+
+  /* Built by walking DEFAULT_FORM_DATA rather than by hand, so the shape is
+     opaque to the compiler on the way out — hence the double assertion. */
+  const filledWith = (filler: string): FormDataMap =>
+    Object.fromEntries(
+      Object.entries(DEFAULT_FORM_DATA).map(([type, data]) => [
+        type,
+        Object.fromEntries(Object.keys(data).map((field) => [field, filler])),
+      ]),
+    ) as unknown as FormDataMap;
+
+  for (const type of types) {
+    test(`${type} encodes nothing when every field is blank`, () => {
+      expect(formatQRData(type, DEFAULT_FORM_DATA[type])).toBe("");
+    });
+
+    test(`${type} encodes nothing when every field is whitespace`, () => {
+      expect(formatQRData(type, filledWith("  \t ")[type])).toBe("");
+    });
+  }
+
+  test("a single filled field is enough to have something to encode", () => {
+    expect(formatQRData("vcard", { ...DEFAULT_FORM_DATA.vcard, org: "Acme" })).toContain(
+      "ORG:Acme",
+    );
+    expect(formatQRData("text", { content: " padded " })).toBe(" padded ");
+  });
+});
+
+describe("whitespace normalization", () => {
+  test("trims the mailto recipient, which cannot carry surrounding spaces", () => {
+    expect(formatQRData("email", { to: "  a@b.com  ", subject: "", body: "" })).toBe(
+      "mailto:a@b.com",
+    );
+  });
+
+  test("drops a subject that is only whitespace instead of encoding it", () => {
+    expect(formatQRData("email", { to: "a@b.com", subject: "   ", body: "" })).toBe(
+      "mailto:a@b.com",
+    );
+  });
+
+  test("trims vCard values so a blank field emits no property line", () => {
+    const out = formatQRData("vcard", {
+      ...DEFAULT_FORM_DATA.vcard,
+      firstName: "   ",
+      org: "  Acme  ",
+    });
+    expect(out).toBe(["BEGIN:VCARD", "VERSION:3.0", "ORG:Acme", "END:VCARD"].join("\r\n"));
   });
 });
