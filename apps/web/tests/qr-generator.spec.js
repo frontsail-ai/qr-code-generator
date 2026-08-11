@@ -836,6 +836,41 @@ test.describe("QR Code Generator", () => {
       expect(after.height).toBeCloseTo(before.height, 0);
     });
 
+    /* A guard, not a regression test — it passed before the fix too, and the
+       reason is worth writing down: centring only moves anything when there is
+       free space to distribute. Measured against the centred layout, the shift
+       was 0.0px at 560 and 620, -34.3px at 720, and -43.1px at 900, where it
+       caps at half the advisory's height. Below roughly 700px the column
+       already overflows, so centring degrades to top-alignment on its own and
+       the bug simply is not there.
+       What this locks in is the property anchoring was supposed to buy at that
+       size: the code is never tucked above the canvas, and everything under it
+       stays reachable. */
+    test("keeps the controls reachable in a short window", async ({ page }) => {
+      await page.setViewportSize({ width: 1280, height: 620 });
+      await page.getByPlaceholder("frontsail.ai").fill("short-window-test.com");
+      await page.waitForTimeout(400);
+
+      const sheet = page.getByTestId("qr-sheet");
+      const before = await sheet.boundingBox();
+
+      await page.getByRole("button", { name: "#FFFFFF" }).first().click();
+      await page.waitForTimeout(400);
+      await expect(page.getByText("too light to scan reliably", { exact: false })).toBeVisible();
+
+      expect((await sheet.boundingBox()).y).toBeCloseTo(before.y, 0);
+
+      // Never tucked above the canvas, which is what centred overflow does
+      const canvasTop = (await page.locator("main").boundingBox()).y;
+      expect((await sheet.boundingBox()).y).toBeGreaterThanOrEqual(canvasTop);
+
+      // And everything below it is still gettable
+      const download = page.getByRole("button", { name: "Download PNG" });
+      await download.scrollIntoViewIfNeeded();
+      await expect(download).toBeInViewport();
+      await expect(download).toBeEnabled();
+    });
+
     test("does not move the code when a logo is added or removed", async ({ page }) => {
       await page.getByPlaceholder("frontsail.ai").fill("logo-shift-test.com");
       await page.waitForTimeout(400);
