@@ -50,3 +50,19 @@ if (!shell.includes(mount)) {
 
 writeFileSync(indexPath, shell.replace(mount, `<div id="root">${html}</div>`));
 console.log(`prerender: injected ${html.length} chars into dist/index.html`);
+
+/* Second dist-finalisation duty (#82): stamp the sitemap's lastmod with the
+   build date. The hand-written date froze at 2026-07-21 while the page kept
+   changing — a lastmod that does not track reality trains crawlers to ignore
+   it. Loud on a missing tag, same as everything else in this script. */
+const sitemapPath = fileURLToPath(new URL("../dist/sitemap.xml", import.meta.url));
+const sitemap = readFileSync(sitemapPath, "utf8");
+if (!/<lastmod>\d{4}-\d{2}-\d{2}<\/lastmod>/.test(sitemap)) {
+  throw new Error("dist/sitemap.xml has no <lastmod> to stamp — update scripts/prerender.mjs");
+}
+const today = new Date().toISOString().slice(0, 10);
+writeFileSync(
+  sitemapPath,
+  sitemap.replace(/<lastmod>\d{4}-\d{2}-\d{2}<\/lastmod>/, `<lastmod>${today}</lastmod>`),
+);
+console.log(`prerender: stamped sitemap lastmod ${today}`);

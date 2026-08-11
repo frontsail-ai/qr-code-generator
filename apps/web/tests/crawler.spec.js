@@ -24,6 +24,26 @@ test.describe("A crawler without JavaScript", () => {
     expect(body).toContain("Why this generator");
     expect(body).toContain("Codes never expire");
     expect(body).toContain("no sign-up, no watermark");
+
+    // The SERP snippet (#80): inside Google's ~160-char display budget, and
+    // still carrying the claims that earn the click.
+    const description = html.match(/<meta\s+name="description"\s+content="([^"]*)"/)?.[1];
+    expect(description, "meta description must exist").toBeTruthy();
+    expect(description.length, "Google truncates around 160 chars").toBeLessThanOrEqual(160);
+    expect(description.toLowerCase()).toContain("free");
+    expect(description).toContain("MCP");
+  });
+
+  test("the sitemap's lastmod tracks the build, not a hand-written date", async ({ request }) => {
+    const response = await request.get("/sitemap.xml");
+    expect(response.ok()).toBe(true);
+    const lastmod = (await response.text()).match(/<lastmod>(\d{4}-\d{2}-\d{2})<\/lastmod>/)?.[1];
+    expect(lastmod, "lastmod must exist and be a date").toBeTruthy();
+    // Stamped by scripts/prerender.mjs at build time (#82); the suite builds
+    // right before it runs, so anything older than a couple of days is the
+    // frozen hand-written date creeping back.
+    const ageDays = (Date.now() - new Date(lastmod).getTime()) / 86_400_000;
+    expect(ageDays).toBeLessThan(2);
   });
 
   test("sees a styled, readable page without executing a line of JS", async ({ page }) => {
