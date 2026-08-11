@@ -1,7 +1,7 @@
 {
   "name": "qr-code-generator",
   "description": "Design QR codes that actually scan — scannability rules, styling safety rails, and generation via the qr-code-gen.frontsail.app toolchain",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "author": {
     "name": "FrontSail AI"
   },

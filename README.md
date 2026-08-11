@@ -30,6 +30,31 @@
 - **Export:** PNG at 2× resolution or SVG
 - **Workspace UI:** three-pane desktop layout on an engineering-grid canvas; mobile gets a history drawer and a sticky export bar
 
+## Use it from your agent
+
+One generator, three surfaces: design in the [browser](https://qr-code-gen.frontsail.app/), generate from your code via [`@frontsail-ai/qr-mcp`](https://www.npmjs.com/package/@frontsail-ai/qr-mcp), or hand both to your agent. The MCP server generates the codes; the [`qr-code` skill](skills/qr-code/SKILL.md) teaches the agent which designs will actually scan.
+
+**Claude Code**
+
+```bash
+claude plugin marketplace add frontsail-ai/qr-code-generator
+claude plugin install qr-code-generator@frontsail-qr   # the skill
+claude mcp add qr -- npx -y @frontsail-ai/qr-mcp       # the generator
+```
+
+**OpenAI Codex**
+
+```bash
+$skill-installer https://github.com/frontsail-ai/qr-code-generator/tree/master/skills/qr-code
+codex mcp add qr -- npx -y @frontsail-ai/qr-mcp
+```
+
+(Or copy `skills/qr-code/` into `~/.codex/skills/` by hand. Working inside a clone of this repo, Codex discovers the skill automatically via `.agents/skills/`.)
+
+**Any other agent**
+
+The skill follows the [Agent Skills](https://agentskills.io) spec — copy `skills/qr-code/` to wherever your agent loads skills from, and register `npx -y @frontsail-ai/qr-mcp` as a stdio MCP server.
+
 ## Repository layout
 
 A Bun workspace monorepo:
@@ -41,15 +66,10 @@ packages/
   core/       @frontsail/qr-core — framework-free QR logic + vitest units
   mcp/        @frontsail-ai/qr-mcp — stdio MCP server for agents
 skills/
-  qr-code/    QR scannability skill, distributed as a Claude Code plugin
+  qr-code/    QR scannability skill for any agentskills.io-compatible agent
 ```
 
-Agents can use this project two ways. The MCP server generates codes (`claude mcp add qr -- npx -y @frontsail-ai/qr-mcp`); the skill teaches an agent which designs will actually scan:
-
-```bash
-claude plugin marketplace add frontsail-ai/qr-code-generator
-claude plugin install qr-code-generator@frontsail-qr
-```
+Install instructions for the skill and MCP server are under [Use it from your agent](#use-it-from-your-agent) above.
 
 `packages/core` holds the parts that have nothing to do with React: types,
 presets, data formatters, the qr-code-styling option mapping, and the

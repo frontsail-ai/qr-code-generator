@@ -1,6 +1,10 @@
 ---
 name: qr-code
 description: Design and generate QR codes that actually scan. Use when creating a QR code, styling one with colours, gradients, dot shapes or a logo, judging whether a QR design will scan, or debugging a code that will not read. Also use for any question about QR error-correction levels, quiet zones, contrast, transparent backgrounds, logo coverage, sizing a code for print or a banner, or making a shareable link to a QR design.
+license: MIT
+metadata:
+  author: frontsail-ai
+  version: "0.3.0"
 ---
 
 # QR codes that scan
@@ -58,10 +62,14 @@ These are the failures that do not show up in the file you get back.
 - `generate_qr_code` — returns SVG (280px, resolution-independent, prefer this) or PNG (560px), or writes to an absolute `output_path`.
 - `create_share_link` — returns a link that reopens the design in the web editor, for handing to a human to tweak. Logos are not included in share links.
 
-**If it is not available**, install it:
+**If it is not available**, register `npx -y @frontsail-ai/qr-mcp` as a stdio MCP server in whatever agent you are running in:
 
 ```bash
+# Claude Code
 claude mcp add qr -- npx -y @frontsail-ai/qr-mcp
+
+# OpenAI Codex
+codex mcp add qr -- npx -y @frontsail-ai/qr-mcp
 ```
 
 Or point the user at [qr-code-gen.frontsail.app](https://qr-code-gen.frontsail.app/) and build a share link for them by hand — the design travels in the URL fragment, so nothing is stored server-side.
