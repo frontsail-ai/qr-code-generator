@@ -1,0 +1,27 @@
+# QR Code Generator
+
+> Free QR code generator that runs entirely in the browser — colors, gradients, dot styles, logo overlays, and shareable links. No sign-up, no backend; designs never leave the machine. The same generator is available to AI agents through an MCP server and an Agent Skill.
+
+## Use it from an agent
+
+Two pieces, installable together or separately:
+
+- **MCP server** — `@frontsail-ai/qr-mcp` on npm. Tools: `generate_qr_code` (SVG or PNG, five content types, full styling) and `create_share_link` (a URL that reopens the design in this editor). Register it as a stdio server:
+  - Claude Code: `claude mcp add qr -- npx -y @frontsail-ai/qr-mcp`
+  - OpenAI Codex: `codex mcp add qr -- npx -y @frontsail-ai/qr-mcp`
+  - Any MCP client: run `npx -y @frontsail-ai/qr-mcp` over stdio
+- **Agent Skill** — `qr-code`, in the Agent Skills format (https://agentskills.io). Teaches an agent which QR designs will actually scan: contrast that survives thresholding, quiet zones, logo budget, transparent-background traps, sizing. Install:
+  - Claude Code: `claude plugin marketplace add frontsail-ai/qr-code-generator` then `claude plugin install qr-code-generator@frontsail-qr`
+  - OpenAI Codex: `$skill-installer https://github.com/frontsail-ai/qr-code-generator/tree/master/skills/qr-code`
+  - Any agent: copy the `skills/qr-code/` directory from the repository into the agent's skills directory
+
+## Share links
+
+A design encodes into the URL fragment (`#s=…`), so a share link rebuilds the design entirely client-side — nothing is stored on a server. Logos travel as files only and are not included in share links.
+
+## Links
+
+- [Source repository](https://github.com/frontsail-ai/qr-code-generator)
+- [The skill, SKILL.md](https://github.com/frontsail-ai/qr-code-generator/blob/master/skills/qr-code/SKILL.md)
+- [MCP server on npm](https://www.npmjs.com/package/@frontsail-ai/qr-mcp)
+- [The app](https://qr-code-gen.frontsail.app/)
