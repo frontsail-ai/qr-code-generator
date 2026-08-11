@@ -14,11 +14,15 @@ const plugin = JSON.parse(read("../../../skills/qr-code/.claude-plugin/plugin.js
   name: string;
   description: string;
   version: string;
+  repository: string;
 };
 const marketplace = JSON.parse(read("../../../.claude-plugin/marketplace.json")) as {
+  name: string;
   plugins: { name: string; description: string }[];
 };
 const mcpManifest = JSON.parse(read("../package.json")) as { name: string };
+const webSetup = read("../../../apps/web/src/content/agentSetup.ts");
+const readme = read("../../../README.md");
 
 const frontmatterMatch = skillMd.match(/^---\n([\s\S]*?)\n---\n/);
 const frontmatter = frontmatterMatch?.[1] ?? "";
@@ -60,6 +64,37 @@ describe("skill and manifests agree", () => {
   });
 
   test("the install command the skill teaches names the real package", () => {
-    expect(body).toContain(`npx -y ${mcpManifest.name}`);
+    expectExactly(body, `npx -y ${mcpManifest.name}`);
+  });
+});
+
+/* Containment alone passes on "@frontsail-ai/qr-mcp-typo" because the true
+   name is a prefix of the wrong one. The lookahead insists the match is not
+   the head of a longer name. */
+function expectExactly(source: string, text: string) {
+  const literal = text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  expect(source).toMatch(new RegExp(`${literal}(?![\\w-])`));
+}
+
+/* The web app's agent-setup dialog and the README each carry a copy of the
+   install commands. Both are grepped as text against the manifests, so a
+   renamed package, plugin, marketplace or repo turns CI red instead of
+   shipping a command that installs nothing. */
+describe.each([
+  ["web agent-setup module", webSetup],
+  ["README", readme],
+])("install commands in the %s", (_label, source) => {
+  test("name the real npm package", () => {
+    expectExactly(source, `npx -y ${mcpManifest.name}`);
+  });
+
+  test("install the real plugin from the real marketplace", () => {
+    expectExactly(source, `${plugin.name}@${marketplace.name}`);
+  });
+
+  test("point marketplace-add and the skill URL at the real repo", () => {
+    const slug = plugin.repository.replace("https://github.com/", "");
+    expectExactly(source, `claude plugin marketplace add ${slug}`);
+    expect(source).toContain(`${plugin.repository}/tree/master/skills/qr-code`);
   });
 });

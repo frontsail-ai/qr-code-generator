@@ -1,5 +1,6 @@
 import { ImagePlus } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { AgentSetupDialog } from "./components/AgentSetupDialog";
 import { ConsentBanner } from "./components/ConsentBanner";
 import { CustomizationPanel } from "./components/customization";
 import { EmailForm, PhoneForm, TextForm, URLForm, VCardForm } from "./components/forms";
@@ -72,6 +73,7 @@ function App() {
   } = useDraft(sharedDesign);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [agentSetupOpen, setAgentSetupOpen] = useState(false);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
   const { toast, toastVisible, showToast } = useToast();
   const {
@@ -250,7 +252,10 @@ function App() {
      user has stopped thinking about. Esc abandons the offer outright — an
      expiry you are waiting out should be answerable. */
   useEffect(() => {
-    if (undoRows.length === 0) return;
+    /* A modal above the tray owns the keyboard: Escape there means "close the
+       dialog" and must not spend a pending take-back on the way out, and ⌘Z
+       must not replay one behind a backdrop the user is reading. */
+    if (undoRows.length === 0 || agentSetupOpen) return;
     const onKeyDown = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null;
       if (target?.closest("input, textarea, select, [contenteditable]")) return;
@@ -265,7 +270,18 @@ function App() {
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [undoRows.length, takeThrough, dismissUndo]);
+  }, [undoRows.length, agentSetupOpen, takeThrough, dismissUndo]);
+
+  /* showModal() makes the Undo button inert, so the offer must not drain
+     while it is unreachable. hold/release are no-op-safe without a window. */
+  const openAgentSetup = useCallback(() => {
+    setAgentSetupOpen(true);
+    holdUndo();
+  }, [holdUndo]);
+  const closeAgentSetup = useCallback(() => {
+    setAgentSetupOpen(false);
+    releaseUndo();
+  }, [releaseUndo]);
 
   const handleDelete = useCallback(
     (config: SavedConfig) => {
@@ -412,6 +428,7 @@ function App() {
         onToggleSidebar={toggleSidebar}
         sidebarOpen={sidebarOpen}
         onOpenDrawer={() => setDrawerOpen(true)}
+        onOpenAgentSetup={openAgentSetup}
         hasContent={hasContent}
       />
 
@@ -549,6 +566,8 @@ function App() {
         onHold={holdUndo}
         onRelease={releaseUndo}
       />
+
+      {agentSetupOpen && <AgentSetupDialog onClose={closeAgentSetup} />}
 
       {consentDecision === null && (
         <ConsentBanner
