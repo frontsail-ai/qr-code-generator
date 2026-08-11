@@ -48,7 +48,10 @@
   /* ---- Semantic aliases ---- */
   --text-primary: var(--ink-900);
   --text-secondary: var(--ink-600);
-  --text-muted: var(--ink-400);
+  /* ink-500, not ink-400: this token carries readable text — the character
+     counter, export hints, section labels — and ink-400 on paper measures
+     2.99:1, under the 4.5:1 WCAG AA floor for text this size. */
+  --text-muted: var(--ink-500);
   --surface-page: var(--paper-0);
   --surface-card: var(--paper-card);
   --surface-sunken: var(--paper-50);

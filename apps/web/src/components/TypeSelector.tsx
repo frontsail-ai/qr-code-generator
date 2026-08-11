@@ -15,10 +15,16 @@ interface TypeSelectorProps {
   onChange: (value: QRType) => void;
 }
 
-/* Icon grid in the desktop inspector; horizontally scrollable chips on mobile. */
+/* One icon grid at every width.
+ *
+ * Mobile used to lay these out as chips in a horizontally scrolling row, which
+ * put vCard 29px past the right edge of a 390px viewport with nothing to say it
+ * was there: no fade, no partial chip, no scrollbar on a touch device. A type
+ * you can only find by guessing that a row scrolls is a type most people never
+ * find. Stacking the label under the icon fits all five in the same space. */
 export function TypeSelector({ value, onChange }: TypeSelectorProps) {
   return (
-    <div className="flex gap-1.5 overflow-x-auto lg:grid lg:grid-cols-5 lg:overflow-visible">
+    <div className="grid grid-cols-5 gap-1.5">
       {QR_TYPES.map((type) => {
         const Icon = ICONS[type.value];
         const selected = value === type.value;
@@ -28,7 +34,7 @@ export function TypeSelector({ value, onChange }: TypeSelectorProps) {
             key={type.value}
             onClick={() => onChange(type.value)}
             aria-pressed={selected}
-            className={`flex items-center lg:flex-col gap-1.5 lg:gap-[5px] px-3 lg:px-0.5 py-2 lg:py-[9px] rounded-[2px] border cursor-pointer whitespace-nowrap transition-colors duration-[140ms] shrink-0 lg:shrink ${
+            className={`flex flex-col items-center gap-[5px] px-0.5 py-[9px] rounded-[2px] border cursor-pointer whitespace-nowrap transition-colors duration-[140ms] ${
               selected
                 ? "bg-[var(--ink-900)] text-[var(--paper-0)] border-[var(--ink-900)]"
                 : "bg-[var(--paper-card)] text-[var(--ink-600)] border-[var(--border-hairline)] hover:border-[var(--ink-400)] hover:text-[var(--ink-900)]"

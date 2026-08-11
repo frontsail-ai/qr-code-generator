@@ -153,7 +153,10 @@ test.describe("QR Code Generator", () => {
       await expect(page.getByText("tel:+15551234567", { exact: true })).toBeVisible();
 
       await input.fill("+1 555 123 4567 ext. 89");
-      await expect(page.getByText("Nothing to encode yet")).toBeVisible();
+      /* Not "Nothing to encode yet" — there is plainly something in the field,
+         and the message has to describe the situation the user is looking at. */
+      await expect(page.getByText("This PHONE cannot be encoded")).toBeVisible();
+      await expect(page.getByText("Nothing to encode yet")).toBeHidden();
       await expect(page.getByRole("button", { name: "Download PNG" })).toBeDisabled();
       await expect(page.getByRole("button", { name: "Download SVG" })).toBeDisabled();
       await expect(page.getByRole("button", { name: "Share" })).toBeDisabled();
@@ -1079,8 +1082,10 @@ test.describe("QR Code Generator", () => {
       // Should have multiple restore buttons
       await expect(page.getByRole("button", { name: "Restore" })).toHaveCount(2);
 
-      // Clear all — arms on the first click, fires on the second
+      /* Arms on the first click, fires on the second — after the dead time that
+         stops a double-click from answering its own question. */
       await page.getByRole("button", { name: "Clear all" }).click();
+      await page.waitForTimeout(600);
       await page.getByRole("button", { name: "Confirm clearing all history" }).click();
 
       // Should show empty message
@@ -1252,6 +1257,7 @@ test.describe("QR Code Generator", () => {
       await seedHistory(page, ["alpha.example", "beta.example"]);
 
       await page.getByRole("button", { name: "Clear all" }).click();
+      await page.waitForTimeout(600);
       await page.getByRole("button", { name: "Confirm clearing all history" }).click();
       await expect(page.getByText("No saved codes yet")).toBeVisible();
       expect(await storedUrls(page)).toEqual([]);

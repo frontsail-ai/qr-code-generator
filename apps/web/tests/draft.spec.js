@@ -55,6 +55,57 @@ test.describe("Working draft", () => {
     await page.goto("/");
   });
 
+  /* The draft is written on a trailing debounce, which is a window where the
+     design exists only in memory. A reload waits it out; a crash does not. */
+  test.describe("Leaving in a hurry", () => {
+    test("keeps the last edit when the page goes away mid-debounce", async ({ page }) => {
+      await urlInput(page).fill("typed-and-gone.example");
+      // Well inside the debounce — nothing has been written yet
+      await page.waitForTimeout(120);
+      await page.evaluate(() => window.dispatchEvent(new PageTransitionEvent("pagehide")));
+
+      const written = await page.evaluate(() => {
+        const key = Object.keys(localStorage).find((k) => k.startsWith("qr-draft:"));
+        return key ? JSON.parse(localStorage.getItem(key)).formData.url.url : null;
+      });
+      expect(written).toBe("typed-and-gone.example");
+
+      await page.reload();
+      await expect(urlInput(page)).toHaveValue("typed-and-gone.example");
+    });
+  });
+
+  test.describe("Telling the user", () => {
+    test("says when it put a design back, and offers a way to start over", async ({ page }) => {
+      await urlInput(page).fill("restored-design.example");
+      await settleDraft(page);
+      await page.reload();
+
+      const toast = page.getByTestId("toast");
+      await expect(toast).toContainText("Picked up where you left off");
+      await expect(toast).toBeInViewport();
+
+      // Taking the offer is the only route back to a blank canvas
+      await page.getByRole("button", { name: "Undo" }).click();
+      await expect(urlInput(page)).toHaveValue("");
+      await expect(page.getByText("Nothing to encode yet")).toBeVisible();
+
+      // Starting over is destructive too, so it hands back what it cleared
+      await expect(page.getByTestId("toast")).toContainText("Started a new design");
+      await page.getByRole("button", { name: "Undo" }).click();
+      await expect(urlInput(page)).toHaveValue("restored-design.example");
+      await settleDraft(page);
+      await page.reload();
+      await expect(urlInput(page)).toHaveValue("restored-design.example");
+    });
+
+    test("says nothing on a first visit, when nothing was restored", async ({ page }) => {
+      await urlInput(page).fill("first-visit.example");
+      await page.waitForTimeout(800);
+      await expect(page.getByTestId("toast")).not.toContainText("Picked up where you left off");
+    });
+  });
+
   test.describe("Survives a reload", () => {
     test("keeps the content and the style of the design in progress", async ({ page }) => {
       await urlInput(page).fill("unsaved-work.example");
@@ -194,6 +245,244 @@ test.describe("Working draft", () => {
       await second.close();
       await third.close();
     });
+
+    /* Duplicating a tab clones `sessionStorage`, so the twin boots holding the
+       original's id. Without the roll-call the two write the same slot and the
+       original reloads into the twin's design — the exact collision per-tab
+       slots were chosen to avoid. */
+    test("a duplicated tab takes a slot of its own instead of sharing one", async ({
+      context,
+      page,
+    }) => {
+      await urlInput(page).fill("original-tab.example");
+      await settleDraft(page);
+      const clonedId = await page.evaluate(() => sessionStorage.getItem("qr-tab-id"));
+
+      /* Hand the twin the cloned id once and boot it, the way duplicating a
+         tab does — not on every navigation, which would undo the re-key the
+         moment we reload to check it. */
+      const twin = await context.newPage();
+      await twin.goto("/");
+      await twin.evaluate((id) => sessionStorage.setItem("qr-tab-id", id), clonedId);
+      await twin.reload();
+      await expect(urlInput(twin)).toHaveValue("original-tab.example");
+      // Give the roll-call time to notice the collision and re-key
+      await twin.waitForTimeout(600);
+      await urlInput(twin).fill("twin-tab.example");
+      await settleDraft(twin);
+
+      await page.reload();
+      await expect(urlInput(page)).toHaveValue("original-tab.example");
+      await twin.reload();
+      await expect(urlInput(twin)).toHaveValue("twin-tab.example");
+
+      await twin.close();
+    });
+
+    /* The slot cap bounds abandoned drafts. It used to bound live ones too. */
+    test("a new tab does not evict an open tab's draft to stay under the cap", async ({
+      context,
+      page,
+    }) => {
+      await urlInput(page).fill("oldest-but-open.example");
+      await settleDraft(page);
+
+      const others = [];
+      for (let i = 0; i < 5; i++) {
+        const tab = await context.newPage();
+        await tab.goto("/");
+        await tab.waitForTimeout(400);
+        await urlInput(tab).fill(`filler-${i}.example`);
+        await settleDraft(tab);
+        others.push(tab);
+      }
+
+      // The oldest tab is still open, so its draft is not the cap's business
+      await page.reload();
+      await expect(urlInput(page)).toHaveValue("oldest-but-open.example");
+      for (const tab of others) await tab.close();
+    });
+  });
+
+  /* The whole history list is rewritten on every save, so anything this build
+     drops on the way in is erased on the way out. A newer build's entry — a
+     rolled-back deploy, a cached bundle, two tabs across a release — must
+     survive a version of the app that cannot render it. */
+  test.describe("History written by another version", () => {
+    const seedWithForeign = (page) =>
+      page.evaluate(() => {
+        const blank = {
+          email: { to: "", subject: "", body: "" },
+          phone: { number: "" },
+          text: { content: "" },
+          vcard: {
+            firstName: "",
+            lastName: "",
+            phone: "",
+            email: "",
+            org: "",
+            title: "",
+            website: "",
+          },
+        };
+        localStorage.setItem(
+          "qr-saved-configs",
+          JSON.stringify([
+            {
+              id: "known",
+              timestamp: new Date().toISOString(),
+              qrType: "url",
+              formData: { url: { url: "readable.example" }, ...blank },
+              customization: {},
+            },
+            // A QR type this build has never heard of
+            {
+              id: "from-the-future",
+              timestamp: new Date().toISOString(),
+              qrType: "wifi",
+              formData: { wifi: { ssid: "home" }, ...blank },
+              customization: {},
+            },
+          ]),
+        );
+      });
+
+    const storedIds = (page) =>
+      page.evaluate(() =>
+        JSON.parse(localStorage.getItem("qr-saved-configs") ?? "[]").map((c) => c.id),
+      );
+
+    test("skips what it cannot read without deleting it", async ({ page }) => {
+      await seedWithForeign(page);
+      await page.reload();
+
+      // Not rendered — this build has no idea how to draw it
+      await expect(page.getByTestId("history-card")).toHaveCount(1);
+
+      // ...and an ordinary save does not take it down with the rewrite
+      await urlInput(page).fill("an-ordinary-save.example");
+      await page.waitForTimeout(400);
+      const download = page.waitForEvent("download");
+      await page.getByRole("button", { name: "Download PNG" }).click();
+      await download;
+      await expect.poll(() => storedIds(page)).toContain("from-the-future");
+
+      // Nor does deleting the entries this build can see
+      await page.getByTestId("history-card").first().hover();
+      await page.getByRole("button", { name: "Delete" }).first().click();
+      await expect.poll(() => storedIds(page)).toContain("from-the-future");
+    });
+  });
+
+  /* Each of these is a place where the state was right and the user could not
+     act on it: a control under another control, a control off the edge of the
+     screen, text under the contrast floor, or a message describing a different
+     situation than the one on screen. */
+  test.describe("Reachability", () => {
+    test("Clear all is not answered by the double-click that asked it", async ({ page }) => {
+      for (const name of ["one.example", "two.example", "three.example"]) {
+        await urlInput(page).fill(name);
+        await page.waitForTimeout(400);
+        const download = page.waitForEvent("download");
+        await page.getByRole("button", { name: "Download PNG" }).click();
+        await download;
+      }
+      await expect(page.getByTestId("history-card")).toHaveCount(3);
+
+      const clearAll = page.getByRole("button", { name: "Clear all" });
+      const box = await clearAll.boundingBox();
+      await page.mouse.dblclick(box.x + box.width / 2, box.y + box.height / 2);
+
+      // Armed by the first click, and not fired by the second
+      await expect(
+        page.getByRole("button", { name: "Confirm clearing all history" }),
+      ).toBeVisible();
+      await expect(page.getByTestId("history-card")).toHaveCount(3);
+
+      // A click the user aimed at the question still answers it
+      await page.waitForTimeout(600);
+      await page.getByRole("button", { name: "Confirm clearing all history" }).click();
+      await expect(page.getByTestId("history-card")).toHaveCount(0);
+    });
+
+    test("the export bar is not buried under the consent banner on a phone", async ({ page }) => {
+      await page.setViewportSize({ width: 390, height: 844 });
+      await page.goto("/");
+      await urlInput(page).fill("mobile-export.example");
+      await page.waitForTimeout(500);
+
+      await expect(page.getByRole("region", { name: "Analytics consent" })).toBeVisible();
+      const onTop = await page.evaluate(() => {
+        const button = [...document.querySelectorAll("button")].find((b) =>
+          b.textContent.includes("Download PNG"),
+        );
+        const box = button.getBoundingClientRect();
+        const hit = document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2);
+        return hit === button || button.contains(hit);
+      });
+      expect(onTop).toBe(true);
+      await expect(page.getByRole("button", { name: "Download PNG" })).toBeInViewport();
+    });
+
+    test("every QR type is on screen on a phone", async ({ page }) => {
+      await page.setViewportSize({ width: 390, height: 844 });
+      await page.goto("/");
+      for (const type of ["URL", "Email", "Phone", "Text", "vCard"]) {
+        await expect(page.getByRole("button", { name: type, exact: true })).toBeInViewport();
+      }
+      await page.getByRole("button", { name: "vCard", exact: true }).click();
+      await expect(page.getByPlaceholder("John", { exact: true })).toBeVisible();
+    });
+
+    test("muted text clears the contrast floor", async ({ page }) => {
+      await urlInput(page).fill("contrast.example");
+      await page.waitForTimeout(500);
+
+      const ratio = await page.evaluate(() => {
+        const counter = [...document.querySelectorAll("span")].find((s) =>
+          s.textContent.trim().endsWith("chars"),
+        );
+        const relative = (rgb) => {
+          const [r, g, b] = rgb
+            .match(/\d+/g)
+            .slice(0, 3)
+            .map(Number)
+            .map((v) => {
+              const s = v / 255;
+              return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+            });
+          return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+        };
+        const style = getComputedStyle(counter);
+        let node = counter;
+        let background = style.backgroundColor;
+        while (background === "rgba(0, 0, 0, 0)" && node.parentElement) {
+          node = node.parentElement;
+          background = getComputedStyle(node).backgroundColor;
+        }
+        const [light, dark] = [relative(style.color), relative(background)].sort((a, b) => b - a);
+        return (light + 0.05) / (dark + 0.05);
+      });
+      expect(ratio).toBeGreaterThanOrEqual(4.5);
+    });
+
+    test("says a number cannot be encoded rather than asking for content", async ({ page }) => {
+      await page.getByRole("button", { name: "Phone", exact: true }).click();
+      await page.getByPlaceholder("+1 234 567 8900").fill("555 ext. 89");
+      await page.waitForTimeout(500);
+
+      await expect(page.getByText("This PHONE cannot be encoded")).toBeVisible();
+      await expect(page.getByText(/Letters and extensions have no place to go/)).toBeVisible();
+      // The old message asked for content that is already there
+      await expect(page.getByText("Nothing to encode yet")).toBeHidden();
+      await expect(page.getByRole("button", { name: "Download PNG" })).toBeDisabled();
+
+      // ...and a number it can express still works
+      await page.getByPlaceholder("+1 234 567 8900").fill("+1 234 567 8900");
+      await page.waitForTimeout(500);
+      await expect(page.getByText("This PHONE cannot be encoded")).toBeHidden();
+      await expect(page.getByRole("button", { name: "Download PNG" })).toBeEnabled();
+    });
   });
 
   /* Storage that silently refuses to store is the failure this whole feature
@@ -209,6 +498,25 @@ test.describe("Working draft", () => {
       await expect(storageNotice(page)).toBeInViewport();
       await expect(storageNotice(page)).toHaveText(/storage is full/i);
       await expect(storageNotice(page)).toHaveAttribute("role", "alert");
+    });
+
+    /* The notice arrives while the user is reaching for Download. On desktop
+       the column is vertically centred, so anything added to the flow moves
+       that button by half the height it added — which is how a warning about
+       losing work ends up making you misclick. */
+    test("appears without moving the button the user is reaching for", async ({ page }) => {
+      await urlInput(page).fill("no-shift.example");
+      await settleDraft(page);
+      const before = await page.getByRole("button", { name: "Download PNG" }).boundingBox();
+
+      await fillStorage(page, 0);
+      await urlInput(page).fill("no-shift-grown.example");
+      await settleDraft(page);
+
+      await expect(storageNotice(page)).toBeVisible();
+      const after = await page.getByRole("button", { name: "Download PNG" }).boundingBox();
+      expect(after.y).toBe(before.y);
+      await expect(storageNotice(page)).toBeInViewport();
     });
 
     test("keeps the design when only the logo does not fit", async ({ page }) => {
