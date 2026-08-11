@@ -15,6 +15,7 @@
   <a href="https://qr-code-gen.frontsail.app/"><b>▶ Try it live</b></a>
   ·
   <a href="https://github.com/frontsail-ai/qr-code-generator/actions/workflows/ci.yml"><img src="https://github.com/frontsail-ai/qr-code-generator/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://www.npmjs.com/package/@frontsail-ai/qr-mcp"><img src="https://img.shields.io/npm/v/@frontsail-ai/qr-mcp?logo=npm&logoColor=white&label=%40frontsail-ai%2Fqr-mcp&color=cb3837" alt="@frontsail-ai/qr-mcp on npm"></a>
 </p>
 
 ![The QR Code Generator workspace — history rail, live preview canvas, and style inspector](docs/screenshots/desktop-populated.png)
