@@ -374,6 +374,117 @@ test.describe("Working draft", () => {
     });
   });
 
+  /* Each of these is a place where the state was right and the user could not
+     act on it: a control under another control, a control off the edge of the
+     screen, text under the contrast floor, or a message describing a different
+     situation than the one on screen. */
+  test.describe("Reachability", () => {
+    test("Clear all is not answered by the double-click that asked it", async ({ page }) => {
+      for (const name of ["one.example", "two.example", "three.example"]) {
+        await urlInput(page).fill(name);
+        await page.waitForTimeout(400);
+        const download = page.waitForEvent("download");
+        await page.getByRole("button", { name: "Download PNG" }).click();
+        await download;
+      }
+      await expect(page.getByTestId("history-card")).toHaveCount(3);
+
+      const clearAll = page.getByRole("button", { name: "Clear all" });
+      const box = await clearAll.boundingBox();
+      await page.mouse.dblclick(box.x + box.width / 2, box.y + box.height / 2);
+
+      // Armed by the first click, and not fired by the second
+      await expect(
+        page.getByRole("button", { name: "Confirm clearing all history" }),
+      ).toBeVisible();
+      await expect(page.getByTestId("history-card")).toHaveCount(3);
+
+      // A click the user aimed at the question still answers it
+      await page.waitForTimeout(600);
+      await page.getByRole("button", { name: "Confirm clearing all history" }).click();
+      await expect(page.getByTestId("history-card")).toHaveCount(0);
+    });
+
+    test("the export bar is not buried under the consent banner on a phone", async ({ page }) => {
+      await page.setViewportSize({ width: 390, height: 844 });
+      await page.goto("/");
+      await urlInput(page).fill("mobile-export.example");
+      await page.waitForTimeout(500);
+
+      await expect(page.getByRole("region", { name: "Analytics consent" })).toBeVisible();
+      const onTop = await page.evaluate(() => {
+        const button = [...document.querySelectorAll("button")].find((b) =>
+          b.textContent.includes("Download PNG"),
+        );
+        const box = button.getBoundingClientRect();
+        const hit = document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2);
+        return hit === button || button.contains(hit);
+      });
+      expect(onTop).toBe(true);
+      await expect(page.getByRole("button", { name: "Download PNG" })).toBeInViewport();
+    });
+
+    test("every QR type is on screen on a phone", async ({ page }) => {
+      await page.setViewportSize({ width: 390, height: 844 });
+      await page.goto("/");
+      for (const type of ["URL", "Email", "Phone", "Text", "vCard"]) {
+        await expect(page.getByRole("button", { name: type, exact: true })).toBeInViewport();
+      }
+      await page.getByRole("button", { name: "vCard", exact: true }).click();
+      await expect(page.getByPlaceholder("John", { exact: true })).toBeVisible();
+    });
+
+    test("muted text clears the contrast floor", async ({ page }) => {
+      await urlInput(page).fill("contrast.example");
+      await page.waitForTimeout(500);
+
+      const ratio = await page.evaluate(() => {
+        const counter = [...document.querySelectorAll("span")].find((s) =>
+          s.textContent.trim().endsWith("chars"),
+        );
+        const relative = (rgb) => {
+          const [r, g, b] = rgb
+            .match(/\d+/g)
+            .slice(0, 3)
+            .map(Number)
+            .map((v) => {
+              const s = v / 255;
+              return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+            });
+          return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+        };
+        const style = getComputedStyle(counter);
+        let node = counter;
+        let background = style.backgroundColor;
+        while (background === "rgba(0, 0, 0, 0)" && node.parentElement) {
+          node = node.parentElement;
+          background = getComputedStyle(node).backgroundColor;
+        }
+        const [light, dark] = [relative(style.color), relative(background)].sort((a, b) => b - a);
+        return (light + 0.05) / (dark + 0.05);
+      });
+      expect(ratio).toBeGreaterThanOrEqual(4.5);
+    });
+
+    test("says a number cannot be encoded rather than asking for content", async ({ page }) => {
+      await page.getByRole("button", { name: "Phone", exact: true }).click();
+      await page.getByPlaceholder("+1 234 567 8900").fill("555 ext. 89");
+      await page.waitForTimeout(500);
+
+      await expect(page.getByText("This PHONE cannot be encoded")).toBeVisible();
+      await expect(page.getByText(/Letters and extensions have no place to go/)).toBeVisible();
+      // The old message asked for content that is already there
+      await expect(page.getByText("Nothing to encode yet")).toBeHidden();
+      await expect(page.getByRole("button", { name: "Download PNG" })).toBeDisabled();
+
+      // ...and a number it can express still works
+      await page.getByPlaceholder("+1 234 567 8900").fill("+1 234 567 8900");
+      await page.waitForTimeout(500);
+      await expect(page.getByText("This PHONE cannot be encoded")).toBeHidden();
+      await expect(page.getByRole("button", { name: "Download PNG" })).toBeEnabled();
+    });
+  });
+
   /* Storage that silently refuses to store is the failure this whole feature
      exists to stop, so it has to be loud in the place the user is looking. */
   test.describe("When storage is full", () => {

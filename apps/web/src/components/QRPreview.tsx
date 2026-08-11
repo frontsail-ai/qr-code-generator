@@ -4,7 +4,7 @@ import { useDebounce } from "../hooks/useDebounce";
 import { useIsDesktop } from "../hooks/useMediaQuery";
 import { RENDER_STALLED_ERROR, useQRCode } from "../hooks/useQRCode";
 import type { Customization, FormDataMap, QRType } from "@frontsail/qr-core";
-import { assessScanRisk, formatQRData, isTransparent } from "@frontsail/qr-core";
+import { assessScanRisk, formatQRData, hasAnyContent, isTransparent } from "@frontsail/qr-core";
 import { Badge, Button, IconButton, Note } from "./ui";
 
 interface QRPreviewProps {
@@ -45,6 +45,14 @@ export function QRPreview({
   );
 
   const isEmpty = !debouncedData;
+  /* `formatQRData` returns "" for two different situations, and only one of
+     them is "you have not typed anything yet". The other is a form with
+     content that its format cannot express — a phone number carrying an
+     extension, say — and telling that user to "add some content" contradicts
+     the field they are looking at. `hasAnyContent` is what separates the two;
+     the MCP server has asked it since #54, and this is the app's other
+     human-facing caller. */
+  const unencodable = isEmpty && hasAnyContent(formData[qrType]);
   const exportLocked = isEmpty || !!error;
   // Follows the debounced options so the checkerboard and the QR flip together
   const transparentBg = isTransparent(debouncedOptions.backgroundColor);
@@ -71,7 +79,9 @@ export function QRPreview({
   const typeLabel = qrType === "vcard" ? "vCard" : qrType.toUpperCase();
 
   const exportHint = exportLocked
-    ? "Download unlocks when there is content to encode"
+    ? unencodable
+      ? "Download unlocks once the content fits the format"
+      : "Download unlocks when there is content to encode"
     : `PNG exports at 560 × 560 px · 2×${
         transparentBg ? " · transparent background" : ""
       } — downloading also saves to history`;
@@ -147,7 +157,20 @@ export function QRPreview({
           }`}
         />
       </div>
-      {isEmpty && (
+      {isEmpty && unencodable && (
+        <div className="w-[328px] max-w-full aspect-square bg-[color-mix(in_srgb,var(--paper-card)_65%,transparent)] border-[1.5px] border-dashed border-[var(--signal-warn-500)] rounded-[2px] flex flex-col items-center justify-center gap-3 p-8 text-center">
+          <ScanLine className="w-9 h-9 text-[var(--signal-warn-500)]" aria-hidden />
+          <div className="text-[15px] font-semibold text-[var(--text-primary)]">
+            This {typeLabel} cannot be encoded
+          </div>
+          <p className="text-[13px] text-[var(--text-secondary)] leading-normal max-w-[260px]">
+            {qrType === "phone" || qrType === "vcard"
+              ? "A dial link holds digits, a leading +, * and #, and the separators - . ( ). Letters and extensions have no place to go."
+              : "Some of this content cannot be written in this format. Check it for characters the format does not allow."}
+          </p>
+        </div>
+      )}
+      {isEmpty && !unencodable && (
         <div className="w-[328px] max-w-full aspect-square bg-[color-mix(in_srgb,var(--paper-card)_65%,transparent)] border-[1.5px] border-dashed border-[var(--ink-300)] rounded-[2px] flex flex-col items-center justify-center gap-3 p-8 text-center">
           <ScanLine className="w-9 h-9 text-[var(--ink-300)]" aria-hidden />
           <div className="text-[15px] font-semibold text-[var(--text-primary)]">
@@ -214,7 +237,11 @@ export function QRPreview({
         </Note>
       )}
 
-      {/* Export — static block on desktop */}
+      {/* Export — a static block on desktop, a bar fixed to the bottom of the
+          viewport on mobile. That bar is lifted by the consent inset because the
+          banner is fixed down there too and sits above it: without the inset the
+          banner covers the export bar outright on a phone, so a first-time
+          visitor cannot see Download and a tap aimed at it lands on "Accept". */}
       {isDesktop ? (
         <div className="flex w-[328px] flex-col gap-2 mt-1.5">
           <span className="font-mono text-[10px] tracking-[0.08em] uppercase text-[var(--text-muted)]">
@@ -230,7 +257,7 @@ export function QRPreview({
           )}
         </div>
       ) : (
-        <div className="fixed bottom-0 left-0 right-0 z-10 bg-[var(--surface-card)] border-t border-[var(--border-hairline)] px-4 py-3 flex gap-2 shadow-[0_-2px_6px_rgba(27,24,18,0.06)]">
+        <div className="fixed bottom-[var(--consent-inset)] left-0 right-0 z-10 bg-[var(--surface-card)] border-t border-[var(--border-hairline)] px-4 py-3 flex gap-2 shadow-[0_-2px_6px_rgba(27,24,18,0.06)]">
           {exportButtons}
         </div>
       )}

@@ -1,5 +1,5 @@
 import { QrCode, RotateCcw, Share2, Trash2, X } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useIsDesktop } from "../hooks/useMediaQuery";
 import type { SavedConfig } from "@frontsail/qr-core";
 import { formatQRData } from "@frontsail/qr-core";
@@ -117,6 +117,15 @@ function ConfigCard({ config, onRestore, onDelete, onShare }: ConfigCardProps) {
    unrelated click lands on it. */
 const CONFIRM_WINDOW_MS = 4000;
 
+/* How long the armed control ignores clicks. The confirm sits exactly where
+   the trigger was — inline is the whole point — so the second click of a
+   double-click lands on it, and "are you sure?" is answered by the same
+   gesture that asked. Measured: a double-click took three saved designs to
+   zero. A window slightly longer than the platform double-click threshold
+   (500 ms on macOS and Windows both) makes the confirm answerable only by a
+   click the user aimed at it, without adding anything for them to read. */
+const ARM_DEAD_TIME_MS = 500;
+
 /* Two-step "Clear all".
  *
  * Every other destructive control in the app settles for an undo toast, which
@@ -127,6 +136,7 @@ const CONFIRM_WINDOW_MS = 4000;
  * would be heavier than what it guards. */
 function ClearAllButton({ onClearAll }: { onClearAll: () => void }) {
   const [armed, setArmed] = useState(false);
+  const armedAt = useRef(0);
 
   useEffect(() => {
     if (!armed) return;
@@ -142,9 +152,12 @@ function ClearAllButton({ onClearAll }: { onClearAll: () => void }) {
       aria-label={armed ? "Confirm clearing all history" : "Clear all"}
       onClick={() => {
         if (!armed) {
+          armedAt.current = Date.now();
           setArmed(true);
           return;
         }
+        // The second half of a double-click is not an answer to the question
+        if (Date.now() - armedAt.current < ARM_DEAD_TIME_MS) return;
         setArmed(false);
         onClearAll();
       }}
