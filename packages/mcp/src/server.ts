@@ -21,7 +21,7 @@ import { PNG_SIZE, RenderError, renderPng, renderSvg, SVG_SIZE } from "./render.
 export const SHARE_BASE_URL = "https://qr-code-gen.frontsail.app/";
 
 export const SERVER_NAME = "qr-code-generator";
-export const SERVER_VERSION = "0.2.0";
+export const SERVER_VERSION = "0.3.0";
 
 function toolError(message: string): CallToolResult {
   return { content: [{ type: "text", text: message }], isError: true };
