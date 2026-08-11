@@ -26,6 +26,7 @@
         "@types/react": "^19.2.17",
         "@types/react-dom": "^19.2.3",
         "@vitejs/plugin-react": "^6.0.5",
+        "jsdom": "^30.0.1",
         "tailwindcss": "^4.0.0",
         "typescript": "^7.0.2",
         "vite": "npm:@voidzero-dev/vite-plus-core@0.2.7",
@@ -46,7 +47,7 @@
     },
     "packages/mcp": {
       "name": "@frontsail-ai/qr-mcp",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "bin": {
         "qr-mcp": "dist/index.mjs",
       },
