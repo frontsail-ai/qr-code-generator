@@ -58,7 +58,7 @@ export function AboutSection() {
           </h2>
           <p className="text-[13px] leading-relaxed text-[var(--text-secondary)]">
             A QR code is a commitment — once printed, it has to keep working. The choices here are
-            built around that.
+            built around that, and every one of them is free.
           </p>
         </div>
         <dl className="grid sm:grid-cols-2 gap-x-10 gap-y-8">
