@@ -1,5 +1,5 @@
 import { QrCode, RotateCcw, Share2, Trash2, X } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { useIsDesktop } from "../hooks/useMediaQuery";
 import type { SavedConfig } from "@frontsail/qr-core";
 import { formatQRData } from "@frontsail/qr-core";
@@ -7,7 +7,8 @@ import { relativeTime } from "../utils/relativeTime";
 import { QRThumbnail } from "./QRThumbnail";
 import { Badge, Button, IconButton } from "./ui";
 
-function summarize(config: SavedConfig): string {
+/* Also the label a deleted entry shows when its tray row is expanded. */
+export function summarize(config: SavedConfig): string {
   const { qrType, formData } = config;
   switch (qrType) {
     case "url":
@@ -213,6 +214,21 @@ function AnalyticsToggle({ enabled, onChange }: AnalyticsToggleProps) {
   );
 }
 
+/* Holds the gap a deleted card left, for exactly as long as its take-back is
+   pending. The tray says what can be reversed; this says where the thing goes
+   back to, which the tray cannot. Decorative by construction — aria-hidden and
+   unfocusable, because the announcement already carries the fact and a
+   placeholder in the tab order would be a control that does nothing. */
+function PendingSlot() {
+  return (
+    <div
+      aria-hidden
+      data-testid="pending-slot"
+      className="h-[62px] shrink-0 rounded-[5px] border border-dashed border-[var(--ink-300)] bg-[color-mix(in_srgb,var(--paper-card)_40%,transparent)]"
+    />
+  );
+}
+
 interface SavedConfigsProps {
   configs: SavedConfig[];
   onRestore: (config: SavedConfig) => void;
@@ -220,6 +236,8 @@ interface SavedConfigsProps {
   onShare: (config: SavedConfig) => void;
   onClearAll: () => void;
   onClose?: () => void;
+  /* History positions held open by a pending take-back. */
+  pendingSlots: number[];
   analyticsEnabled: boolean;
   onAnalyticsChange: (enabled: boolean) => void;
 }
@@ -234,6 +252,7 @@ export function SavedConfigs({
   onShare,
   onClearAll,
   onClose,
+  pendingSlots,
   analyticsEnabled,
   onAnalyticsChange,
 }: SavedConfigsProps) {
@@ -259,15 +278,28 @@ export function SavedConfigs({
         </div>
       ) : (
         <div className="flex-1 overflow-y-auto px-3 flex flex-col gap-2">
-          {configs.map((config) => (
-            <ConfigCard
-              key={config.id}
-              config={config}
-              onRestore={onRestore}
-              onDelete={onDelete}
-              onShare={onShare}
-            />
+          {configs.map((config, i) => (
+            <Fragment key={config.id}>
+              {/* Two designs deleted from the same position vacated two rows,
+                  so hold two gaps — one would under-report what is coming back. */}
+              {pendingSlots
+                .filter((slot) => slot === i)
+                .map((slot, n) => (
+                  <PendingSlot key={`${slot}-${n}`} />
+                ))}
+              <ConfigCard
+                config={config}
+                onRestore={onRestore}
+                onDelete={onDelete}
+                onShare={onShare}
+              />
+            </Fragment>
           ))}
+          {pendingSlots
+            .filter((slot) => slot >= configs.length)
+            .map((slot) => (
+              <PendingSlot key={`tail-${slot}`} />
+            ))}
         </div>
       )}
 

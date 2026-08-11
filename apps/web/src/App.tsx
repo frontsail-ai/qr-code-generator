@@ -5,9 +5,9 @@ import { CustomizationPanel } from "./components/customization";
 import { EmailForm, PhoneForm, TextForm, URLForm, VCardForm } from "./components/forms";
 import { Header } from "./components/Header";
 import { QRPreview } from "./components/QRPreview";
-import { SavedConfigs } from "./components/SavedConfigs";
+import { SavedConfigs, summarize } from "./components/SavedConfigs";
 import { TypeSelector } from "./components/TypeSelector";
-import { SectionLabel, Toast } from "./components/ui";
+import { SectionLabel, Tray } from "./components/ui";
 import { useAnalyticsConsent } from "./hooks/useAnalyticsConsent";
 import { useDraft } from "./hooks/useDraft";
 import { useIsDesktop } from "./hooks/useMediaQuery";
@@ -74,7 +74,18 @@ function App() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
   const { toast, toastVisible, showToast } = useToast();
-  const { undoLabel, pushUndo, runUndo } = useUndo();
+  const {
+    rows: undoRows,
+    windowMs: undoWindowMs,
+    windowKey: undoWindowKey,
+    held: undoHeld,
+    pendingSlots,
+    pushUndo,
+    takeThrough,
+    hold: holdUndo,
+    release: releaseUndo,
+    dismiss: dismissUndo,
+  } = useUndo();
 
   const { savedConfigs, saveConfig, deleteConfig, clearAllConfigs, insertConfig, restoreConfigs } =
     useSavedConfigs();
@@ -233,6 +244,29 @@ function App() {
 
   /* Removing history is also the one action that hands storage back, so a
      draft that did not fit before is worth attempting again after it. */
+  /* Scoped, not global. Inside a text field \u2318Z already means "undo my
+     typing", and the browser does that better than we would; outside the undo
+     window the keys do nothing at all, so they can never reverse an action the
+     user has stopped thinking about. Esc abandons the offer outright — an
+     expiry you are waiting out should be answerable. */
+  useEffect(() => {
+    if (undoRows.length === 0) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (target?.closest("input, textarea, select, [contenteditable]")) return;
+      if (event.key === "Escape") {
+        dismissUndo();
+        return;
+      }
+      if ((event.metaKey || event.ctrlKey) && !event.shiftKey && event.key.toLowerCase() === "z") {
+        event.preventDefault();
+        takeThrough(1);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [undoRows.length, takeThrough, dismissUndo]);
+
   const handleDelete = useCallback(
     (config: SavedConfig) => {
       const index = savedConfigs.findIndex((c) => c.id === config.id);
@@ -243,6 +277,10 @@ function App() {
         kind: "delete",
         text: "Design deleted",
         pluralText: (count) => `${count} designs deleted`,
+        /* What the row expands to. "3 designs deleted" is only checkable if the
+           three can be read back, and this is the only place that text exists. */
+        itemLabel: summarize(config),
+        slot: index,
         undo: () => reportWrite(insertConfig(config, index), UNDO_ERRORS),
       });
     },
@@ -359,6 +397,7 @@ function App() {
       onDelete={handleDelete}
       onShare={handleShareConfig}
       onClearAll={handleClearAll}
+      pendingSlots={pendingSlots}
       analyticsEnabled={consentDecision === "granted"}
       onAnalyticsChange={setConsentEnabled}
     />
@@ -490,6 +529,7 @@ function App() {
               onDelete={handleDelete}
               onShare={handleShareConfig}
               onClearAll={handleClearAll}
+              pendingSlots={pendingSlots}
               onClose={() => setDrawerOpen(false)}
               analyticsEnabled={consentDecision === "granted"}
               onAnalyticsChange={setConsentEnabled}
@@ -498,7 +538,17 @@ function App() {
         </div>
       )}
 
-      <Toast toast={toast} toastVisible={toastVisible} undoLabel={undoLabel} onUndo={runUndo} />
+      <Tray
+        toast={toast}
+        toastVisible={toastVisible}
+        rows={undoRows}
+        windowMs={undoWindowMs}
+        windowKey={undoWindowKey}
+        held={undoHeld}
+        onTakeThrough={takeThrough}
+        onHold={holdUndo}
+        onRelease={releaseUndo}
+      />
 
       {consentDecision === null && (
         <ConsentBanner
