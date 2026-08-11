@@ -466,7 +466,7 @@ test.describe("QR Code Generator", () => {
       await expect(toggle(page)).toHaveAttribute("aria-pressed", "false");
 
       await page.getByTestId("history-card").first().hover();
-      await page.getByRole("button", { name: "Restore" }).click();
+      await page.getByRole("button", { name: "Restore", exact: true }).click();
 
       await expect(toggle(page)).toHaveAttribute("aria-pressed", "true");
     });
@@ -494,7 +494,7 @@ test.describe("QR Code Generator", () => {
 
       // Restore saved config (actions reveal on hover)
       await page.getByTestId("history-card").first().hover();
-      await page.getByRole("button", { name: "Restore" }).click();
+      await page.getByRole("button", { name: "Restore", exact: true }).click();
 
       // Verify color is restored
       const hexInput = page.locator('input[type="text"]').first();
@@ -524,7 +524,7 @@ test.describe("QR Code Generator", () => {
 
       // Restore saved config (actions reveal on hover)
       await page.getByTestId("history-card").first().hover();
-      await page.getByRole("button", { name: "Restore" }).click();
+      await page.getByRole("button", { name: "Restore", exact: true }).click();
 
       // Verify gradient mode is restored
       const gradientButton = page.getByRole("button", {
@@ -615,7 +615,7 @@ test.describe("QR Code Generator", () => {
         buffer: Buffer.from(ONE_BY_ONE_PNG_BASE64, "base64"),
       });
 
-      await expect(page.getByRole("button", { name: "Remove" })).toBeVisible();
+      await expect(page.getByRole("button", { name: "Remove", exact: true })).toBeVisible();
       // qr-code-styling embeds the logo as an <image> inside the preview SVG
       await expect(page.locator("section svg image").first()).toBeVisible();
       await expect(page.getByRole("button", { name: "Download PNG" })).toBeEnabled();
@@ -695,7 +695,7 @@ test.describe("QR Code Generator", () => {
         base64: ONE_BY_ONE_PNG_BASE64,
       });
 
-      await expect(page.getByRole("button", { name: "Remove" })).toBeVisible();
+      await expect(page.getByRole("button", { name: "Remove", exact: true })).toBeVisible();
       await expect(page.getByRole("alert")).toBeHidden();
       await expect(page.locator("section svg image").first()).toBeVisible();
     });
@@ -706,7 +706,7 @@ test.describe("QR Code Generator", () => {
         mimeType: "image/png",
         base64: ONE_BY_ONE_PNG_BASE64,
       });
-      await expect(page.getByRole("button", { name: "Remove" })).toBeVisible();
+      await expect(page.getByRole("button", { name: "Remove", exact: true })).toBeVisible();
 
       // A bad file arriving while a good logo is set keeps the good one and says so
       await dropFileOnCanvas(page, {
@@ -715,9 +715,9 @@ test.describe("QR Code Generator", () => {
         text: "just some text",
       });
       await expect(page.getByRole("alert")).toContainText("Please upload an image file");
-      await expect(page.getByRole("button", { name: "Remove" })).toBeVisible();
+      await expect(page.getByRole("button", { name: "Remove", exact: true })).toBeVisible();
 
-      await page.getByRole("button", { name: "Remove" }).click();
+      await page.getByRole("button", { name: "Remove", exact: true }).click();
       await expect(page.getByRole("alert")).toBeHidden();
       await expect(page.getByText("Click to upload logo")).toBeVisible();
     });
@@ -766,7 +766,7 @@ test.describe("QR Code Generator", () => {
       await page.reload();
 
       await page.getByTestId("history-card").first().hover();
-      await page.getByRole("button", { name: "Restore" }).click();
+      await page.getByRole("button", { name: "Restore", exact: true }).click();
 
       // Debounce (300ms) + render watchdog (3s) must elapse before the stall is called
       await expect(
@@ -886,11 +886,11 @@ test.describe("QR Code Generator", () => {
         mimeType: "image/png",
         buffer: Buffer.from(ONE_BY_ONE_PNG_BASE64, "base64"),
       });
-      await expect(page.getByRole("button", { name: "Remove" })).toBeVisible();
+      await expect(page.getByRole("button", { name: "Remove", exact: true })).toBeVisible();
       await page.waitForTimeout(400);
       expect((await sheet.boundingBox()).y).toBeCloseTo(before.y, 0);
 
-      await page.getByRole("button", { name: "Remove" }).click();
+      await page.getByRole("button", { name: "Remove", exact: true }).click();
       await page.waitForTimeout(400);
       expect((await sheet.boundingBox()).y).toBeCloseTo(before.y, 0);
     });
@@ -1024,7 +1024,7 @@ test.describe("QR Code Generator", () => {
 
       // Should now show the saved config
       await expect(page.getByText("No saved codes yet")).not.toBeVisible();
-      await expect(page.getByRole("button", { name: "Restore" })).toBeVisible();
+      await expect(page.getByRole("button", { name: "Restore", exact: true })).toBeVisible();
 
       /* The exported file must carry a real quiet zone — ISO/IEC 18004 wants at
          least 4 modules on every side. Measure it in the downloaded pixels
@@ -1101,7 +1101,7 @@ test.describe("QR Code Generator", () => {
       await downloadPromise;
 
       // Should now show the saved config
-      await expect(page.getByRole("button", { name: "Restore" })).toBeVisible();
+      await expect(page.getByRole("button", { name: "Restore", exact: true })).toBeVisible();
     });
 
     test("should restore saved configuration", async ({ page }) => {
@@ -1122,7 +1122,7 @@ test.describe("QR Code Generator", () => {
 
       // Restore the saved config (actions reveal on hover)
       await page.getByTestId("history-card").first().hover();
-      await page.getByRole("button", { name: "Restore" }).click();
+      await page.getByRole("button", { name: "Restore", exact: true }).click();
 
       // Check values are restored
       await expect(page.getByPlaceholder("frontsail.ai")).toHaveValue("restore-test.com");
@@ -1138,11 +1138,11 @@ test.describe("QR Code Generator", () => {
       await downloadPromise;
 
       // Verify config is saved
-      await expect(page.getByRole("button", { name: "Restore" })).toBeVisible();
+      await expect(page.getByRole("button", { name: "Restore", exact: true })).toBeVisible();
 
       // Delete the config (actions reveal on hover)
       await page.getByTestId("history-card").first().hover();
-      await page.getByRole("button", { name: "Delete" }).click();
+      await page.getByRole("button", { name: "Delete", exact: true }).click();
 
       // Should show empty message again
       await expect(page.getByText("No saved codes yet")).toBeVisible();
@@ -1163,7 +1163,7 @@ test.describe("QR Code Generator", () => {
       await downloadPromise;
 
       // Should have multiple restore buttons
-      await expect(page.getByRole("button", { name: "Restore" })).toHaveCount(2);
+      await expect(page.getByRole("button", { name: "Restore", exact: true })).toHaveCount(2);
 
       /* Arms on the first click, fires on the second — after the dead time that
          stops a double-click from answering its own question. */
@@ -1188,13 +1188,13 @@ test.describe("QR Code Generator", () => {
       await page.waitForTimeout(100);
 
       // Verify config was saved before reload
-      await expect(page.getByRole("button", { name: "Restore" })).toBeVisible();
+      await expect(page.getByRole("button", { name: "Restore", exact: true })).toBeVisible();
 
       // Reload the page (don't clear localStorage this time)
       await page.reload();
 
       // Config should still be there
-      await expect(page.getByRole("button", { name: "Restore" })).toBeVisible();
+      await expect(page.getByRole("button", { name: "Restore", exact: true })).toBeVisible();
     });
 
     test("should not create duplicate entry when restoring and downloading unchanged config", async ({
@@ -1210,7 +1210,7 @@ test.describe("QR Code Generator", () => {
       await downloadPromise;
 
       // Should have 1 saved config
-      await expect(page.getByRole("button", { name: "Restore" })).toHaveCount(1);
+      await expect(page.getByRole("button", { name: "Restore", exact: true })).toHaveCount(1);
 
       // Make some other change to the form
       await page.getByPlaceholder("frontsail.ai").fill("other-url.com");
@@ -1218,7 +1218,7 @@ test.describe("QR Code Generator", () => {
 
       // Restore the saved config (actions reveal on hover)
       await page.getByTestId("history-card").first().hover();
-      await page.getByRole("button", { name: "Restore" }).click();
+      await page.getByRole("button", { name: "Restore", exact: true }).click();
 
       // Download again without making any changes
       await page.waitForTimeout(400);
@@ -1227,7 +1227,7 @@ test.describe("QR Code Generator", () => {
       await downloadPromise;
 
       // Should still have only 1 saved config (no duplicate created)
-      await expect(page.getByRole("button", { name: "Restore" })).toHaveCount(1);
+      await expect(page.getByRole("button", { name: "Restore", exact: true })).toHaveCount(1);
     });
 
     test("should create new entry when restoring and downloading modified config", async ({
@@ -1242,11 +1242,11 @@ test.describe("QR Code Generator", () => {
       await downloadPromise;
 
       // Should have 1 saved config
-      await expect(page.getByRole("button", { name: "Restore" })).toHaveCount(1);
+      await expect(page.getByRole("button", { name: "Restore", exact: true })).toHaveCount(1);
 
       // Restore, then modify (actions reveal on hover)
       await page.getByTestId("history-card").first().hover();
-      await page.getByRole("button", { name: "Restore" }).click();
+      await page.getByRole("button", { name: "Restore", exact: true }).click();
       await page.getByPlaceholder("frontsail.ai").fill("modified-url.com");
 
       // Download the modified config
@@ -1256,7 +1256,7 @@ test.describe("QR Code Generator", () => {
       await downloadPromise;
 
       // Should now have 2 saved configs (new entry for modified config)
-      await expect(page.getByRole("button", { name: "Restore" })).toHaveCount(2);
+      await expect(page.getByRole("button", { name: "Restore", exact: true })).toHaveCount(2);
     });
   });
 
@@ -1323,16 +1323,16 @@ test.describe("QR Code Generator", () => {
 
       // Delete the middle card, so restoring it at the top would be visibly wrong
       await page.getByTestId("history-card").nth(1).hover();
-      await page.getByRole("button", { name: "Delete" }).nth(1).click();
+      await page.getByRole("button", { name: "Delete", exact: true }).nth(1).click();
       expect(await storedUrls(page)).toEqual(["first.example", "third.example"]);
 
       /* The toast is the only route back, so it has to be somewhere the user
          can actually reach — `toBeVisible()` alone would pass off-screen */
-      const toast = page.getByTestId("toast");
-      await expect(toast).toContainText("Design deleted");
-      await expect(toast).toBeInViewport({ ratio: 1 });
+      const tray = page.getByTestId("undo-tray");
+      await expect(tray).toContainText("Design deleted");
+      await expect(tray).toBeInViewport({ ratio: 1 });
 
-      await page.getByRole("button", { name: "Undo" }).click();
+      await page.getByTestId("undo-take").click();
       expect(await storedUrls(page)).toEqual(["first.example", "second.example", "third.example"]);
     });
 
@@ -1345,8 +1345,8 @@ test.describe("QR Code Generator", () => {
       await expect(page.getByText("No saved codes yet")).toBeVisible();
       expect(await storedUrls(page)).toEqual([]);
 
-      await expect(page.getByTestId("toast")).toContainText("Cleared 2 saved designs");
-      await page.getByRole("button", { name: "Undo" }).click();
+      await expect(page.getByTestId("undo-tray")).toContainText("Cleared 2 saved designs");
+      await page.getByTestId("undo-take").click();
 
       expect(await storedUrls(page)).toEqual(["alpha.example", "beta.example"]);
       await expect(page.getByTestId("history-card")).toHaveCount(2);
@@ -1372,10 +1372,10 @@ test.describe("QR Code Generator", () => {
       await page.waitForTimeout(400);
 
       await page.getByTestId("history-card").first().hover();
-      await page.getByRole("button", { name: "Restore" }).click();
+      await page.getByRole("button", { name: "Restore", exact: true }).click();
       await expect(page.getByPlaceholder("frontsail.ai")).toHaveValue("saved-design.example");
 
-      await page.getByRole("button", { name: "Undo" }).click();
+      await page.getByTestId("undo-take").click();
       await expect(page.getByPlaceholder("frontsail.ai")).toHaveValue("unsaved-work.example");
     });
 
@@ -1403,7 +1403,7 @@ test.describe("QR Code Generator", () => {
       }, link);
       await expect(page.getByPlaceholder("frontsail.ai")).toHaveValue("shared.example");
 
-      await page.getByRole("button", { name: "Undo" }).click();
+      await page.getByTestId("undo-take").click();
       await expect(page.getByPlaceholder("frontsail.ai")).toHaveValue("in-progress.example");
     });
 
@@ -1414,13 +1414,13 @@ test.describe("QR Code Generator", () => {
         mimeType: "image/png",
         buffer: Buffer.from(ONE_BY_ONE_PNG_BASE64, "base64"),
       });
-      await expect(page.getByRole("button", { name: "Remove" })).toBeVisible();
+      await expect(page.getByRole("button", { name: "Remove", exact: true })).toBeVisible();
 
-      await page.getByRole("button", { name: "Remove" }).click();
+      await page.getByRole("button", { name: "Remove", exact: true }).click();
       await expect(page.getByText("Click to upload logo")).toBeVisible();
 
-      await page.getByRole("button", { name: "Undo" }).click();
-      await expect(page.getByRole("button", { name: "Remove" })).toBeVisible();
+      await page.getByTestId("undo-take").click();
+      await expect(page.getByRole("button", { name: "Remove", exact: true })).toBeVisible();
       await expect(page.locator("section svg image").first()).toBeVisible();
     });
 
@@ -1428,12 +1428,12 @@ test.describe("QR Code Generator", () => {
       await seedHistory(page, ["only.example"]);
 
       await page.getByTestId("history-card").first().hover();
-      await page.getByRole("button", { name: "Delete" }).click();
-      await page.getByRole("button", { name: "Undo" }).click();
+      await page.getByRole("button", { name: "Delete", exact: true }).click();
+      await page.getByTestId("undo-take").click();
       expect(await storedUrls(page)).toEqual(["only.example"]);
 
       // The offer goes away with the toast, so it cannot be taken twice
-      await expect(page.getByRole("button", { name: "Undo" })).toHaveCount(0);
+      await expect(page.getByTestId("undo-take")).toHaveCount(0);
     });
 
     /* #57 — the undo store used to *be* the toast, so anything that wrote a
@@ -1445,12 +1445,12 @@ test.describe("QR Code Generator", () => {
       // Delete the top card three times over — three separate destructive acts
       for (let i = 0; i < 3; i++) {
         await page.getByTestId("history-card").first().hover();
-        await page.getByRole("button", { name: "Delete" }).first().click();
+        await page.getByRole("button", { name: "Delete", exact: true }).first().click();
       }
       expect(await storedUrls(page)).toEqual(["four.example"]);
 
-      await expect(page.getByTestId("toast")).toContainText("3 designs deleted");
-      await page.getByRole("button", { name: "Undo" }).click();
+      await expect(page.getByTestId("undo-tray")).toContainText("3 designs deleted");
+      await page.getByTestId("undo-take").click();
 
       // All three return, in the order they were in
       expect(await storedUrls(page)).toEqual([
@@ -1468,7 +1468,7 @@ test.describe("QR Code Generator", () => {
       });
 
       await page.getByTestId("history-card").first().hover();
-      await page.getByRole("button", { name: "Delete" }).first().click();
+      await page.getByRole("button", { name: "Delete", exact: true }).first().click();
       expect(await storedUrls(page)).toEqual(["other.example"]);
 
       // A read-only action, with its own message
@@ -1477,8 +1477,8 @@ test.describe("QR Code Generator", () => {
       await expect(page.getByTestId("toast")).toContainText("Link copied to clipboard");
 
       // The message covers the offer; it must not consume it
-      await expect(page.getByTestId("toast")).toContainText("Design deleted");
-      await page.getByRole("button", { name: "Undo" }).click();
+      await expect(page.getByTestId("undo-tray")).toContainText("Design deleted");
+      await page.getByTestId("undo-take").click();
       expect(await storedUrls(page)).toEqual(["keep.example", "other.example"]);
     });
 
@@ -1486,7 +1486,7 @@ test.describe("QR Code Generator", () => {
       await seedHistory(page, ["keep.example"]);
 
       await page.getByTestId("history-card").first().hover();
-      await page.getByRole("button", { name: "Delete" }).first().click();
+      await page.getByRole("button", { name: "Delete", exact: true }).first().click();
       expect(await storedUrls(page)).toEqual([]);
 
       // Downloading is this app's primary action, and it saves as a side effect
@@ -1497,8 +1497,8 @@ test.describe("QR Code Generator", () => {
       await download;
       await expect(page.getByTestId("toast")).toContainText("Saved to history");
 
-      await expect(page.getByTestId("toast")).toContainText("Design deleted");
-      await page.getByRole("button", { name: "Undo" }).click();
+      await expect(page.getByTestId("undo-tray")).toContainText("Design deleted");
+      await page.getByTestId("undo-take").click();
       expect(await storedUrls(page)).toContain("keep.example");
     });
 
@@ -1509,17 +1509,17 @@ test.describe("QR Code Generator", () => {
       });
 
       await page.getByTestId("history-card").first().hover();
-      await page.getByRole("button", { name: "Delete" }).first().click();
+      await page.getByRole("button", { name: "Delete", exact: true }).first().click();
 
       await page.getByTestId("history-card").first().hover();
       await page.getByRole("button", { name: "Copy shareable link" }).first().click();
 
       await page.getByTestId("history-card").first().hover();
-      await page.getByRole("button", { name: "Delete" }).first().click();
+      await page.getByRole("button", { name: "Delete", exact: true }).first().click();
 
       // Both deletes belong to one burst even though a message landed between them
-      await expect(page.getByTestId("toast")).toContainText("2 designs deleted");
-      await page.getByRole("button", { name: "Undo" }).click();
+      await expect(page.getByTestId("undo-tray")).toContainText("2 designs deleted");
+      await page.getByTestId("undo-take").click();
       expect(await storedUrls(page)).toEqual(["one.example", "two.example", "three.example"]);
     });
 
@@ -1530,22 +1530,22 @@ test.describe("QR Code Generator", () => {
         mimeType: "image/png",
         buffer: Buffer.from(ONE_BY_ONE_PNG_BASE64, "base64"),
       });
-      await expect(page.getByRole("button", { name: "Remove" })).toBeVisible();
+      await expect(page.getByRole("button", { name: "Remove", exact: true })).toBeVisible();
 
       await page.getByTestId("history-card").first().hover();
-      await page.getByRole("button", { name: "Delete" }).first().click();
-      await page.getByRole("button", { name: "Remove" }).click();
+      await page.getByRole("button", { name: "Delete", exact: true }).first().click();
+      await page.getByRole("button", { name: "Remove", exact: true }).click();
 
       /* A single Undo reversing both a deleted design and a removed logo would
          be a worse surprise than losing the older offer */
-      await expect(page.getByTestId("toast")).toContainText("Logo removed");
-      await page.getByRole("button", { name: "Undo" }).click();
-      await expect(page.getByRole("button", { name: "Remove" })).toBeVisible();
+      await expect(page.getByTestId("undo-tray")).toContainText("Logo removed");
+      await page.getByTestId("undo-take").click();
+      await expect(page.getByRole("button", { name: "Remove", exact: true })).toBeVisible();
 
       /* They do not merge, but neither does the newer one destroy the older:
          taking the top reveals what was under it (#57). */
-      await expect(page.getByTestId("toast")).toContainText("Design deleted");
-      await page.getByRole("button", { name: "Undo" }).click();
+      await expect(page.getByTestId("undo-tray")).toContainText("Design deleted");
+      await page.getByTestId("undo-take").click();
       expect(await storedUrls(page)).toEqual(["design.example"]);
     });
 
@@ -1559,12 +1559,12 @@ test.describe("QR Code Generator", () => {
 
       // 1. restore — overwrites the in-progress canvas
       await page.getByTestId("history-card").first().hover();
-      await page.getByRole("button", { name: "Restore" }).first().click();
+      await page.getByRole("button", { name: "Restore", exact: true }).first().click();
       await expect(page.getByPlaceholder("frontsail.ai")).toHaveValue("alpha.example");
 
       // 2. delete — destroys a saved design
       await page.getByTestId("history-card").nth(1).hover();
-      await page.getByRole("button", { name: "Delete" }).nth(1).click();
+      await page.getByRole("button", { name: "Delete", exact: true }).nth(1).click();
       expect(await storedUrls(page)).toEqual(["alpha.example"]);
 
       // 3. logo — destroys a data URL the app cannot re-derive
@@ -1573,25 +1573,25 @@ test.describe("QR Code Generator", () => {
         mimeType: "image/png",
         buffer: Buffer.from(ONE_BY_ONE_PNG_BASE64, "base64"),
       });
-      await expect(page.getByRole("button", { name: "Remove" })).toBeVisible();
-      await page.getByRole("button", { name: "Remove" }).click();
+      await expect(page.getByRole("button", { name: "Remove", exact: true })).toBeVisible();
+      await page.getByRole("button", { name: "Remove", exact: true }).click();
       await expect(page.getByText("Click to upload logo")).toBeVisible();
 
       // Unwound in reverse: logo, then the design, then the canvas
-      await expect(page.getByTestId("toast")).toContainText("Logo removed");
-      await page.getByRole("button", { name: "Undo" }).click();
-      await expect(page.getByRole("button", { name: "Remove" })).toBeVisible();
+      await expect(page.getByTestId("undo-tray")).toContainText("Logo removed");
+      await page.getByTestId("undo-take").click();
+      await expect(page.getByRole("button", { name: "Remove", exact: true })).toBeVisible();
 
-      await expect(page.getByTestId("toast")).toContainText("Design deleted");
-      await page.getByRole("button", { name: "Undo" }).click();
+      await expect(page.getByTestId("undo-tray")).toContainText("Design deleted");
+      await page.getByTestId("undo-take").click();
       expect(await storedUrls(page)).toEqual(["alpha.example", "beta.example"]);
 
-      await expect(page.getByTestId("toast")).toContainText("Design restored");
-      await page.getByRole("button", { name: "Undo" }).click();
+      await expect(page.getByTestId("undo-tray")).toContainText("Design restored");
+      await page.getByTestId("undo-take").click();
       await expect(page.getByPlaceholder("frontsail.ai")).toHaveValue("in-progress.example");
 
       // Stack empty — nothing left to offer
-      await expect(page.getByRole("button", { name: "Undo" })).toHaveCount(0);
+      await expect(page.getByTestId("undo-take")).toHaveCount(0);
     });
 
     /* Same three kinds as above in a different interleaving — the logo arrives
@@ -1604,7 +1604,7 @@ test.describe("QR Code Generator", () => {
       await page.waitForTimeout(400);
 
       await page.getByTestId("history-card").first().hover();
-      await page.getByRole("button", { name: "Restore" }).first().click();
+      await page.getByRole("button", { name: "Restore", exact: true }).first().click();
       await expect(page.getByPlaceholder("frontsail.ai")).toHaveValue("beta.example");
 
       await page.locator('input[type="file"]').setInputFiles({
@@ -1612,21 +1612,133 @@ test.describe("QR Code Generator", () => {
         mimeType: "image/png",
         buffer: Buffer.from(ONE_BY_ONE_PNG_BASE64, "base64"),
       });
-      await expect(page.getByRole("button", { name: "Remove" })).toBeVisible();
+      await expect(page.getByRole("button", { name: "Remove", exact: true })).toBeVisible();
 
       await page.getByTestId("history-card").first().hover();
-      await page.getByRole("button", { name: "Delete" }).first().click();
+      await page.getByRole("button", { name: "Delete", exact: true }).first().click();
       expect(await storedUrls(page)).toEqual(["alpha.example"]);
 
-      await page.getByRole("button", { name: "Remove" }).click();
+      await page.getByRole("button", { name: "Remove", exact: true }).click();
       await expect(page.getByText("Click to upload logo")).toBeVisible();
 
-      await page.getByRole("button", { name: "Undo" }).click();
-      await expect(page.getByRole("button", { name: "Remove" })).toBeVisible();
-      await page.getByRole("button", { name: "Undo" }).click();
+      await page.getByTestId("undo-take").click();
+      await expect(page.getByRole("button", { name: "Remove", exact: true })).toBeVisible();
+      await page.getByTestId("undo-take").click();
       expect(await storedUrls(page)).toEqual(["beta.example", "alpha.example"]);
-      await page.getByRole("button", { name: "Undo" }).click();
+      await page.getByTestId("undo-take").click();
       await expect(page.getByPlaceholder("frontsail.ai")).toHaveValue("in-progress-work.example");
+    });
+
+    /* The tray's own additions: depth reachable directly, a group readable but
+       not divisible, clocks that hold while you read, and an idle state that is
+       genuinely nothing. */
+    test("reaches past the top, reversing everything above it", async ({ page }) => {
+      await seedHistory(page, ["one.example", "two.example", "three.example"]);
+      await page.getByPlaceholder("frontsail.ai").fill("canvas.example");
+      await page.waitForTimeout(400);
+
+      await page.getByTestId("history-card").first().hover();
+      await page.getByRole("button", { name: "Restore", exact: true }).first().click();
+      await page.getByTestId("history-card").first().hover();
+      await page.getByRole("button", { name: "Delete", exact: true }).first().click();
+
+      const tray = page.getByTestId("undo-tray");
+      await expect(tray).toContainText("Reversible — 2");
+
+      /* One click on the depth control, not two on the top one */
+      const deep = page.getByTestId("undo-take-deep");
+      await expect(deep).toHaveAttribute("aria-label", /reverses 2 actions/);
+      await deep.click();
+
+      expect(await storedUrls(page)).toEqual(["one.example", "two.example", "three.example"]);
+      await expect(page.getByPlaceholder("frontsail.ai")).toHaveValue("canvas.example");
+      await expect(page.getByTestId("undo-tray")).toHaveCount(0);
+    });
+
+    test("a coalesced group can be read but not divided", async ({ page }) => {
+      await seedHistory(page, ["alpha.example", "beta.example", "keep.example"]);
+
+      for (let i = 0; i < 2; i++) {
+        await page.getByTestId("history-card").first().hover();
+        await page.getByRole("button", { name: "Delete", exact: true }).first().click();
+      }
+      const tray = page.getByTestId("undo-tray");
+      await expect(tray).toContainText("2 designs deleted");
+
+      // The disclosure names both payloads...
+      await page.getByRole("button", { name: /Show what/ }).click();
+      await expect(tray).toContainText("alpha.example");
+      await expect(tray).toContainText("beta.example");
+
+      // ...and offers no way to reverse one without the other
+      await expect(page.getByTestId("undo-take")).toHaveCount(1);
+      await expect(page.getByTestId("undo-take-deep")).toHaveCount(0);
+
+      await page.getByTestId("undo-take").click();
+      expect(await storedUrls(page)).toEqual(["alpha.example", "beta.example", "keep.example"]);
+    });
+
+    test("holds the window while the pointer is over it", async ({ page }) => {
+      await seedHistory(page, ["held.example"]);
+
+      await page.getByTestId("history-card").first().hover();
+      await page.getByRole("button", { name: "Delete", exact: true }).first().click();
+
+      const tray = page.getByTestId("undo-tray");
+      await tray.hover();
+      await expect(tray).toContainText("Held");
+
+      /* Well past the 6s window — the offer survives because it is being read */
+      await page.waitForTimeout(7000);
+      await expect(tray).toContainText("Design deleted");
+      await page.getByTestId("undo-take").click();
+      expect(await storedUrls(page)).toEqual(["held.example"]);
+    });
+
+    test("the keyboard reaches it, but never from inside a text field", async ({ page }) => {
+      await seedHistory(page, ["typed.example"]);
+      const mod = process.platform === "darwin" ? "Meta" : "Control";
+
+      // Inside the URL field the browser keeps its own undo
+      await page.getByPlaceholder("frontsail.ai").fill("in-progress.example");
+      await page.getByTestId("history-card").first().hover();
+      await page.getByRole("button", { name: "Delete", exact: true }).first().click();
+      await page.getByPlaceholder("frontsail.ai").focus();
+      await page.keyboard.press(`${mod}+z`);
+      expect(await storedUrls(page)).toEqual([]);
+
+      // Outside one, it takes the top offer
+      await page.getByTestId("undo-tray").click({ position: { x: 5, y: 20 } });
+      await page.keyboard.press(`${mod}+z`);
+      expect(await storedUrls(page)).toEqual(["typed.example"]);
+    });
+
+    test("Escape abandons the offer", async ({ page }) => {
+      await seedHistory(page, ["gone.example"]);
+      await page.getByTestId("history-card").first().hover();
+      await page.getByRole("button", { name: "Delete", exact: true }).first().click();
+      await expect(page.getByTestId("undo-tray")).toBeVisible();
+
+      await page.keyboard.press("Escape");
+      await expect(page.getByTestId("undo-tray")).toHaveCount(0);
+      expect(await storedUrls(page)).toEqual([]);
+    });
+
+    test("the rail holds the gap a deleted design left", async ({ page }) => {
+      await seedHistory(page, ["first.example", "second.example", "third.example"]);
+
+      await page.getByTestId("history-card").nth(1).hover();
+      await page.getByRole("button", { name: "Delete", exact: true }).nth(1).click();
+
+      // One dashed placeholder, where the card was, decorative only
+      const slot = page.getByTestId("pending-slot");
+      await expect(slot).toHaveCount(1);
+      await expect(slot).toHaveAttribute("aria-hidden", "true");
+      await expect(page.getByTestId("history-card")).toHaveCount(2);
+
+      await page.getByTestId("undo-take").click();
+      await expect(page.getByTestId("pending-slot")).toHaveCount(0);
+      await expect(page.getByTestId("history-card")).toHaveCount(3);
     });
 
     test("a burst still coalesces, and sits on top of what came before", async ({ page }) => {
@@ -1635,21 +1747,21 @@ test.describe("QR Code Generator", () => {
       await page.waitForTimeout(400);
 
       await page.getByTestId("history-card").first().hover();
-      await page.getByRole("button", { name: "Restore" }).first().click();
+      await page.getByRole("button", { name: "Restore", exact: true }).first().click();
       await expect(page.getByPlaceholder("frontsail.ai")).toHaveValue("one.example");
 
       // Two deletes merge into one offer, which lands above the restore
       await page.getByTestId("history-card").first().hover();
-      await page.getByRole("button", { name: "Delete" }).first().click();
+      await page.getByRole("button", { name: "Delete", exact: true }).first().click();
       await page.getByTestId("history-card").first().hover();
-      await page.getByRole("button", { name: "Delete" }).first().click();
-      await expect(page.getByTestId("toast")).toContainText("2 designs deleted");
+      await page.getByRole("button", { name: "Delete", exact: true }).first().click();
+      await expect(page.getByTestId("undo-tray")).toContainText("2 designs deleted");
 
-      await page.getByRole("button", { name: "Undo" }).click();
+      await page.getByTestId("undo-take").click();
       expect(await storedUrls(page)).toEqual(["one.example", "two.example", "three.example"]);
 
-      await expect(page.getByTestId("toast")).toContainText("Design restored");
-      await page.getByRole("button", { name: "Undo" }).click();
+      await expect(page.getByTestId("undo-tray")).toContainText("Design restored");
+      await page.getByTestId("undo-take").click();
       await expect(page.getByPlaceholder("frontsail.ai")).toHaveValue("canvas.example");
     });
   });

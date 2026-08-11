@@ -26,9 +26,28 @@ export interface UndoPush {
      reachable — you cannot clear an already-cleared history, or remove a logo
      twice without adding one back in between. */
   pluralText?: (count: number) => string;
+  /* What this one action was, for the group disclosure. "3 designs deleted"
+     is checkable only if the three can be read back; the payload each entry
+     carries is the only place that text exists. */
+  itemLabel?: string;
+  /* The history-rail position this entry vacated, if it vacated one. The rail
+     holds a dashed placeholder there while the take-back is pending, which is
+     the one question the tray cannot answer: where the thing comes back to. */
+  slot?: number;
   /* Return `false` to say the take-back itself was refused — a restore into
      full storage, say. Replay of a coalesced group stops there rather than
      retrying into the same wall and overwriting the reported failure with a
      later success. Canvas-only undos have nothing to refuse and return void. */
   undo: () => boolean | void;
+}
+
+/* One line of the tray, newest first. `depth` is 1-based and drawn as the
+   ordinal on every row below the top. */
+export interface UndoRow {
+  id: number;
+  depth: number;
+  kind: UndoKind;
+  text: string;
+  count: number;
+  items: string[];
 }

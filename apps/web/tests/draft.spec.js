@@ -181,18 +181,18 @@ test.describe("Working draft", () => {
       await settleDraft(page);
       await page.reload();
 
-      const toast = page.getByTestId("toast");
-      await expect(toast).toContainText("Picked up where you left off");
-      await expect(toast).toBeInViewport({ ratio: 1 });
+      const tray = page.getByTestId("undo-tray");
+      await expect(tray).toContainText("Picked up where you left off");
+      await expect(tray).toBeInViewport({ ratio: 1 });
 
       // Taking the offer is the only route back to a blank canvas
-      await page.getByRole("button", { name: "Undo" }).click();
+      await page.getByTestId("undo-take").click();
       await expect(urlInput(page)).toHaveValue("");
       await expect(page.getByText("Nothing to encode yet")).toBeVisible();
 
       // Starting over is destructive too, so it hands back what it cleared
-      await expect(page.getByTestId("toast")).toContainText("Started a new design");
-      await page.getByRole("button", { name: "Undo" }).click();
+      await expect(page.getByTestId("undo-tray")).toContainText("Started a new design");
+      await page.getByTestId("undo-take").click();
       await expect(urlInput(page)).toHaveValue("restored-design.example");
       await settleDraft(page);
       await page.reload();
@@ -202,7 +202,8 @@ test.describe("Working draft", () => {
     test("says nothing on a first visit, when nothing was restored", async ({ page }) => {
       await urlInput(page).fill("first-visit.example");
       await page.waitForTimeout(800);
-      await expect(page.getByTestId("toast")).not.toContainText("Picked up where you left off");
+      /* Idle is genuinely nothing — no tray, not an empty one */
+      await expect(page.getByTestId("undo-tray")).toHaveCount(0);
     });
   });
 
@@ -250,12 +251,12 @@ test.describe("Working draft", () => {
         mimeType: "image/png",
         buffer: BIG_LOGO,
       });
-      await expect(page.getByRole("button", { name: "Remove" })).toBeVisible();
+      await expect(page.getByRole("button", { name: "Remove", exact: true })).toBeVisible();
       await settleDraft(page);
 
       await page.reload();
 
-      await expect(page.getByRole("button", { name: "Remove" })).toBeVisible();
+      await expect(page.getByRole("button", { name: "Remove", exact: true })).toBeVisible();
       await expect(storageNotice(page)).toBeHidden();
     });
 
@@ -487,7 +488,7 @@ test.describe("Working draft", () => {
 
       // Nor does deleting the entries this build can see
       await page.getByTestId("history-card").first().hover();
-      await page.getByRole("button", { name: "Delete" }).first().click();
+      await page.getByRole("button", { name: "Delete", exact: true }).first().click();
       await expect.poll(() => storedIds(page)).toContain("from-the-future");
     });
   });
@@ -738,7 +739,7 @@ test.describe("Working draft", () => {
         mimeType: "image/png",
         buffer: BIG_LOGO,
       });
-      await expect(page.getByRole("button", { name: "Remove" })).toBeVisible();
+      await expect(page.getByRole("button", { name: "Remove", exact: true })).toBeVisible();
       await settleDraft(page);
 
       await expect(storageNotice(page)).toBeVisible();
@@ -748,7 +749,7 @@ test.describe("Working draft", () => {
 
       // The design came back; the app explains what did not come with it
       await expect(urlInput(page)).toHaveValue("logo-too-big.example");
-      await expect(page.getByRole("button", { name: "Remove" })).toBeHidden();
+      await expect(page.getByRole("button", { name: "Remove", exact: true })).toBeHidden();
       await expect(storageNotice(page)).toHaveText(/logo could not be restored/i);
     });
 
@@ -785,12 +786,12 @@ test.describe("Working draft", () => {
       await expect(page.getByTestId("history-card")).toHaveCount(1);
 
       await page.getByTestId("history-card").first().hover();
-      await page.getByRole("button", { name: "Delete" }).click();
+      await page.getByRole("button", { name: "Delete", exact: true }).click();
       await expect(page.getByTestId("history-card")).toHaveCount(0);
 
       // Something else claims the room the delete just freed
       await fillStorage(page, 0);
-      await page.getByRole("button", { name: "Undo" }).click();
+      await page.getByTestId("undo-take").click();
 
       await expect(storageNotice(page)).toBeVisible();
       await expect(storageNotice(page)).toBeInViewport({ ratio: 1 });

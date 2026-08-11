@@ -164,3 +164,33 @@ body {
     animation-duration: 0.01ms !important;
   }
 }
+
+/* ---- The undo window, drained ---- */
+@keyframes plico-drain {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}
+
+.plico-drain {
+  transform-origin: left center;
+  animation-name: plico-drain;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+  animation-duration: var(--undo-window, 6000ms);
+}
+
+/* The blanket rule above collapses every animation to 0.01ms. For this one that
+   would delete the information rather than the movement — the rule *is* how much
+   time is left. So it keeps its duration under reduce and steps instead, once a
+   second, which leaves the remaining window legible with nothing sliding. A
+   class beats the universal selector, so this wins wherever it is placed. */
+@media (prefers-reduced-motion: reduce) {
+  .plico-drain {
+    animation-duration: var(--undo-window, 6000ms) !important;
+    animation-timing-function: steps(6, end);
+  }
+}

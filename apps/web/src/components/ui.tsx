@@ -1,6 +1,14 @@
-import { Check, Link as LinkIcon, RotateCcw, TriangleAlert, type LucideIcon } from "lucide-react";
-import { useRef, type ButtonHTMLAttributes, type ReactNode, type Ref } from "react";
-import type { ToastKind, ToastState } from "../types";
+import {
+  Check,
+  ChevronDown,
+  ChevronUp,
+  Link as LinkIcon,
+  RotateCcw,
+  TriangleAlert,
+  type LucideIcon,
+} from "lucide-react";
+import { useEffect, useState, type ButtonHTMLAttributes, type ReactNode, type Ref } from "react";
+import type { ToastKind, ToastState, UndoRow } from "../types";
 
 /* Plico primitives — see src/styles/plico.css for the token set. */
 
@@ -128,69 +136,227 @@ const TOAST_ICONS: Record<ToastKind, LucideIcon> = {
   save: Check,
 };
 
-interface ToastProps {
+/* How many rows the tray shows before it folds the rest behind "+n earlier".
+   Three is what fits without the block becoming a panel. */
+const VISIBLE_ROWS = 3;
+
+interface TrayProps {
   toast: ToastState | null;
   toastVisible: boolean;
-  undoLabel: string | null;
-  onUndo: () => void;
+  rows: UndoRow[];
+  windowMs: number;
+  windowKey: number;
+  held: boolean;
+  onTakeThrough: (depth: number) => void;
+  onHold: () => void;
+  onRelease: () => void;
 }
 
-/* Bottom-centre status strip, drawing whichever of two independent things is
-   current: a transient message, or a pending undo offer.
+/* Bottom-centre. Two jobs, deliberately two shapes.
  *
- * A message wins while it is on screen because it is the newer, briefer event
- * — but it only *covers* the offer, it does not end it. The offer comes back
- * for the rest of its window once the message has said its piece. That
- * separation is the whole point: while the action lived inside the message,
- * "Link copied to clipboard" could permanently destroy the take-back for a
- * delete that happened half a second earlier (#57).
+ * A message is an ink line with an icon and no controls: it reports, and two
+ * seconds later it is gone. A take-back is a tray — the same ink, plus a rule
+ * across the top that drains as the window runs out, a mono depth count, and a
+ * *list* of what is reversible.
  *
- * The node stays mounted so the fade runs both ways, which makes it a live
- * region rather than something announced by appearing. The Undo button is the
- * exception: it is rendered only when actually offered, because a button
- * parked at `opacity: 0` is still a tab stop and still counts as visible to
- * Playwright — an invisible control that both keyboards and tests can reach is
- * worse than no control.
+ * The list is the point. Undoing removes a row from something visible rather
+ * than swapping one label for another in place, and a label that changes half a
+ * second after you clicked it reads as "that did not work". Subtraction cannot
+ * be misread that way. It also makes depth reachable: a row below the top can
+ * be taken directly, reversing everything above it in order.
+ *
+ * The two stack rather than one covering the other, so a message can no longer
+ * hide a pending take-back even visually.
  */
-export function Toast({ toast, toastVisible, undoLabel, onUndo }: ToastProps) {
-  const showingMessage = toastVisible && toast !== null;
-  const showingUndo = !showingMessage && undoLabel !== null;
-  const visible = showingMessage || showingUndo;
-  const current = showingMessage
-    ? { Icon: TOAST_ICONS[toast.kind], text: toast.text }
-    : showingUndo
-      ? { Icon: RotateCcw, text: undoLabel }
-      : null;
+export function Tray({
+  toast,
+  toastVisible,
+  rows,
+  windowMs,
+  windowKey,
+  held,
+  onTakeThrough,
+  onHold,
+  onRelease,
+}: TrayProps) {
+  const [expanded, setExpanded] = useState(false);
+  const [openGroup, setOpenGroup] = useState<number | null>(null);
+  const [reachingTo, setReachingTo] = useState(0);
 
-  /* Hold the last thing said so the strip fades out with its words still in
-     it. Dropping them the instant the offer expires empties the box a fifth of
-     a second before it disappears, which reads as a glitch rather than a
-     dismissal. Writing the same value twice is harmless, so a render-phase
-     assignment is safe here. */
-  const lastRef = useRef(current);
-  if (current) lastRef.current = current;
-  const shown = current ?? lastRef.current;
-  const Icon = shown?.Icon ?? RotateCcw;
+  const showingMessage = toastVisible && toast !== null;
+  const MessageIcon = toast ? TOAST_ICONS[toast.kind] : Check;
+  const open = rows.length > 0;
+  const hidden = rows.length - VISIBLE_ROWS;
+  const shown = expanded ? rows : rows.slice(0, VISIBLE_ROWS);
+
+  /* Collapse the disclosures when the tray empties, so the next one does not
+     open mid-expanded from a previous life. */
+  useEffect(() => {
+    if (rows.length === 0) {
+      setExpanded(false);
+      setOpenGroup(null);
+      setReachingTo(0);
+    }
+  }, [rows.length]);
 
   return (
-    <div
-      role="status"
-      aria-live="polite"
-      data-testid="toast"
-      className={`fixed bottom-[calc(6rem+var(--consent-inset))] lg:bottom-[calc(1.5rem+var(--consent-inset))] left-1/2 -translate-x-1/2 z-30 py-2.5 bg-[var(--ink-900)] text-[var(--paper-0)] text-[13px] font-medium rounded-[2px] shadow-[var(--shadow-lg)] flex items-center gap-2.5 transition-all duration-[220ms] ${
-        showingUndo ? "pl-4 pr-2" : "px-4"
-      } ${visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2 pointer-events-none"}`}
-    >
-      <Icon className="w-[15px] h-[15px] shrink-0" aria-hidden />
-      {shown?.text}
-      {showingUndo && (
-        <button
-          type="button"
-          onClick={onUndo}
-          className="bg-transparent border-none cursor-pointer px-2 py-1 -my-1 rounded-[2px] text-[13px] font-semibold text-[var(--paper-0)] underline underline-offset-2 decoration-[color-mix(in_srgb,var(--paper-0)_45%,transparent)] transition-colors duration-[140ms] hover:bg-[color-mix(in_srgb,var(--paper-0)_16%,transparent)]"
+    <div className="fixed bottom-[calc(6rem+var(--consent-inset))] lg:bottom-[calc(1.5rem+var(--consent-inset))] left-1/2 -translate-x-1/2 z-30 w-[352px] max-w-[calc(100vw-2rem)] flex flex-col items-stretch gap-2 pointer-events-none">
+      <div
+        role="status"
+        aria-live="polite"
+        data-testid="toast"
+        className={`self-center flex items-center gap-2.5 px-4 py-2.5 bg-[var(--ink-900)] text-[var(--paper-0)] text-[13px] font-medium rounded-[2px] shadow-[var(--shadow-lg)] transition-all duration-[220ms] ${
+          showingMessage
+            ? "opacity-100 translate-y-0 pointer-events-auto"
+            : "opacity-0 translate-y-2 pointer-events-none"
+        }`}
+      >
+        <MessageIcon className="w-[15px] h-[15px] shrink-0" aria-hidden />
+        {toast?.text}
+      </div>
+
+      {open && (
+        <div
+          data-testid="undo-tray"
+          onMouseEnter={onHold}
+          onMouseLeave={onRelease}
+          onFocus={onHold}
+          onBlur={onRelease}
+          className="pointer-events-auto bg-[var(--ink-900)] text-[var(--paper-0)] rounded-[2px] overflow-hidden shadow-[var(--shadow-lg)]"
         >
-          Undo
-        </button>
+          <div aria-hidden className="h-0.5 bg-[color-mix(in_srgb,var(--paper-0)_16%,transparent)]">
+            <div
+              key={windowKey}
+              data-testid="undo-drain"
+              className="plico-drain h-0.5 bg-[var(--paper-0)]"
+              style={
+                {
+                  "--undo-window": `${windowMs}ms`,
+                  animationPlayState: held ? "paused" : "running",
+                } as React.CSSProperties
+              }
+            />
+          </div>
+
+          <div className="flex items-center gap-2 pl-3.5 pr-3 pt-2 pb-1">
+            <span className="font-mono text-[10px] font-semibold tracking-[0.09em] uppercase text-[color-mix(in_srgb,var(--paper-0)_50%,transparent)]">
+              Reversible — {rows.length}
+            </span>
+            <span className="flex-1" />
+            <span className="font-mono text-[10px] tracking-[0.04em] text-[color-mix(in_srgb,var(--paper-0)_42%,transparent)]">
+              {held ? "Held" : "\u2318Z"}
+            </span>
+          </div>
+
+          {shown.map((row) => {
+            /* `depth` is 1 for the newest group, which is the one the plain Undo
+               takes; a row at depth n reverses n groups. */
+            const isTop = row.depth === 1;
+            /* Reaching for a deeper row tints everything it would reverse, so
+               the number on the button and the rows it refers to are the same
+               statement made twice. */
+            const inReach = reachingTo > 0 && row.depth <= reachingTo;
+            const reverses = row.depth;
+            return (
+              <div
+                key={row.id}
+                data-testid="undo-row"
+                className={`flex flex-col transition-colors duration-[140ms] ${
+                  inReach ? "bg-[color-mix(in_srgb,var(--paper-0)_10%,transparent)]" : ""
+                }`}
+              >
+                <div className="flex items-center gap-2.5 pl-3.5 pr-2 min-h-[34px]">
+                  {isTop ? (
+                    <RotateCcw className="w-3.5 h-3.5 shrink-0" aria-hidden />
+                  ) : (
+                    <span
+                      aria-hidden
+                      className="w-3.5 text-center font-mono text-[10px] font-semibold text-[color-mix(in_srgb,var(--paper-0)_40%,transparent)]"
+                    >
+                      {String(reverses).padStart(2, "0")}
+                    </span>
+                  )}
+                  <span
+                    className={`text-[13px] leading-[1.3] ${
+                      isTop
+                        ? "text-[var(--paper-0)]"
+                        : "text-[color-mix(in_srgb,var(--paper-0)_78%,transparent)]"
+                    }`}
+                  >
+                    {row.text}
+                  </span>
+                  {row.count > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => setOpenGroup((id) => (id === row.id ? null : row.id))}
+                      aria-expanded={openGroup === row.id}
+                      aria-label={`${openGroup === row.id ? "Hide" : "Show"} what "${row.text}" covers`}
+                      className="inline-flex items-center gap-1 px-1 py-px rounded-[2px] bg-transparent border border-[color-mix(in_srgb,var(--paper-0)_28%,transparent)] cursor-pointer font-mono text-[10px] font-semibold text-[color-mix(in_srgb,var(--paper-0)_72%,transparent)] transition-colors duration-[140ms] hover:bg-[color-mix(in_srgb,var(--paper-0)_12%,transparent)] hover:text-[var(--paper-0)]"
+                    >
+                      ×{row.count}
+                      {openGroup === row.id ? (
+                        <ChevronUp className="w-2.5 h-2.5" aria-hidden />
+                      ) : (
+                        <ChevronDown className="w-2.5 h-2.5" aria-hidden />
+                      )}
+                    </button>
+                  )}
+                  <span className="flex-1" />
+                  {isTop ? (
+                    <button
+                      type="button"
+                      onClick={() => onTakeThrough(1)}
+                      data-testid="undo-take"
+                      aria-label={`Undo: ${row.text}`}
+                      className="bg-transparent border-none cursor-pointer px-2 py-1.5 -my-0.5 rounded-[2px] text-[13px] font-semibold text-[var(--paper-0)] underline underline-offset-2 decoration-[color-mix(in_srgb,var(--paper-0)_45%,transparent)] transition-colors duration-[140ms] hover:bg-[color-mix(in_srgb,var(--paper-0)_16%,transparent)]"
+                    >
+                      Undo
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => onTakeThrough(reverses)}
+                      data-testid="undo-take-deep"
+                      onMouseEnter={() => setReachingTo(reverses)}
+                      onMouseLeave={() => setReachingTo(0)}
+                      onFocus={() => setReachingTo(reverses)}
+                      onBlur={() => setReachingTo(0)}
+                      /* The glyph and number would otherwise announce as a bare
+                         "3", which says nothing about what it costs. */
+                      aria-label={`Undo through: ${row.text} — reverses ${reverses} actions`}
+                      className="inline-flex items-center gap-1.5 px-1.5 py-0.5 rounded-[2px] bg-transparent border border-[color-mix(in_srgb,var(--paper-0)_20%,transparent)] cursor-pointer font-mono text-[10px] font-semibold text-[color-mix(in_srgb,var(--paper-0)_72%,transparent)] transition-colors duration-[140ms] hover:bg-[color-mix(in_srgb,var(--paper-0)_16%,transparent)] hover:text-[var(--paper-0)]"
+                    >
+                      <RotateCcw className="w-[11px] h-[11px]" aria-hidden />
+                      {reverses}
+                    </button>
+                  )}
+                </div>
+                {openGroup === row.id && (
+                  <div className="flex flex-col gap-0.5 pl-[38px] pr-3.5 pt-0.5 pb-2">
+                    {row.items.map((item, i) => (
+                      <span
+                        key={`${row.id}-${i}`}
+                        className="font-mono text-[11px] text-[color-mix(in_srgb,var(--paper-0)_55%,transparent)] whitespace-nowrap overflow-hidden text-ellipsis"
+                      >
+                        {item}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+
+          {hidden > 0 && (
+            <button
+              type="button"
+              onClick={() => setExpanded((e) => !e)}
+              className="w-full text-left bg-transparent border-none border-t border-[color-mix(in_srgb,var(--paper-0)_10%,transparent)] cursor-pointer px-3.5 py-[7px] font-mono text-[10px] font-semibold tracking-[0.08em] uppercase text-[color-mix(in_srgb,var(--paper-0)_50%,transparent)] transition-colors duration-[140ms] hover:text-[var(--paper-0)]"
+            >
+              {expanded ? "Show fewer" : `+${hidden} earlier`}
+            </button>
+          )}
+        </div>
       )}
     </div>
   );
