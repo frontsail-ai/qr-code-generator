@@ -23,6 +23,7 @@ const marketplace = JSON.parse(read("../../../.claude-plugin/marketplace.json"))
 const mcpManifest = JSON.parse(read("../package.json")) as { name: string };
 const webSetup = read("../../../apps/web/src/content/agentSetup.ts");
 const readme = read("../../../README.md");
+const llmsTxt = read("../../../apps/web/public/llms.txt");
 
 const frontmatterMatch = skillMd.match(/^---\n([\s\S]*?)\n---\n/);
 const frontmatter = frontmatterMatch?.[1] ?? "";
@@ -83,6 +84,7 @@ function expectExactly(source: string, text: string) {
 describe.each([
   ["web agent-setup module", webSetup],
   ["README", readme],
+  ["llms.txt the site serves", llmsTxt],
 ])("install commands in the %s", (_label, source) => {
   test("name the real npm package", () => {
     expectExactly(source, `npx -y ${mcpManifest.name}`);
