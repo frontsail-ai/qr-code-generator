@@ -32,7 +32,19 @@ const shareBaseUrl = () => `${window.location.origin}${window.location.pathname}
 const SAVE_ERRORS: Record<StorageFailure, string> = {
   quota:
     "Browser storage is full, so this code was not added to history. The file still downloaded.",
-  unavailable: "This browser is blocking storage, so history cannot keep this code.",
+  unavailable:
+    "This browser is blocking storage, so history cannot keep this code. The file still downloaded.",
+};
+
+/* Severity follows the cause, not the channel that reports it. A full disk is
+   something the user did and can undo, so it reads as an error; storage being
+   switched off is a property of the browser they are using, and colouring that
+   red every time they export makes the app look broken when it is behaving
+   exactly as asked. The draft has always drawn this line — the two surfaces
+   were disagreeing about the same condition. */
+const FAILURE_VARIANT: Record<StorageFailure, "warn" | "error"> = {
+  quota: "error",
+  unavailable: "warn",
 };
 
 /* An undo gets its own wording because it fails at the worst possible moment —
@@ -54,6 +66,8 @@ function App() {
     setCustomization,
     applyDesign,
     retryPersist,
+    restored: draftRestored,
+    discard: discardDraft,
     status: draftStatus,
   } = useDraft(sharedDesign);
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -66,13 +80,19 @@ function App() {
     useSavedConfigs();
   /* Sticky until the next mutation succeeds: a failed write is a standing fact
      about this browser, not a two-second event like a successful one. */
-  const [historyError, setHistoryError] = useState<string | null>(null);
+  const [historyError, setHistoryError] = useState<{
+    variant: "warn" | "error";
+    message: string;
+  } | null>(null);
   const reportWrite = useCallback(
     (
       result: { ok: boolean; reason?: StorageFailure },
       messages: Record<StorageFailure, string> = SAVE_ERRORS,
     ) => {
-      setHistoryError(result.ok ? null : messages[result.reason as StorageFailure]);
+      const reason = result.reason as StorageFailure;
+      setHistoryError(
+        result.ok ? null : { variant: FAILURE_VARIANT[reason], message: messages[reason] },
+      );
       return result.ok;
     },
     [],
@@ -151,6 +171,42 @@ function App() {
     window.addEventListener("hashchange", handleHashChange);
     return () => window.removeEventListener("hashchange", handleHashChange);
   }, [applyDesign, pushUndo]);
+
+  /* A restored design is the one thing on this canvas the user did not put
+     there. Announcing it is what makes the feature legible — without it a draft
+     that came back looks like a tab that was never closed, and a tab that
+     adopted another one's work looks like a bug.
+
+     It arrives as an undo offer rather than a plain message because restoring
+     *is* a thing done to the canvas, and the take-back is the only route back
+     to a blank one: clearing a vCard by hand is seven fields, and the draft
+     would faithfully restore every half-cleared step on the way. */
+  const announcedRestore = useRef(false);
+  useEffect(() => {
+    if (!draftRestored || announcedRestore.current) return;
+    announcedRestore.current = true;
+    pushUndo({
+      kind: "restore",
+      text: "Picked up where you left off",
+      undo: () => {
+        const previous = designRef.current;
+        discardDraft();
+        /* Starting over destroys work that has no other copy, so it is
+           takeable-back in turn — deferred by a tick because the store clears
+           the group after replaying it, and a push from inside that replay
+           would be wiped by the very clear that follows it. */
+        setTimeout(
+          () =>
+            pushUndo({
+              kind: "restore",
+              text: "Started a new design",
+              undo: () => applyDesign(previous),
+            }),
+          0,
+        );
+      },
+    });
+  }, [draftRestored, pushUndo, discardDraft, applyDesign]);
 
   const handleSave = useCallback(() => {
     // Only claim the save when there is something saved to claim
@@ -292,11 +348,9 @@ function App() {
      state of the background draft. This is the `Note` channel, not the toast's
      action slot — a full disk is a condition to report, not an action to take
      back. */
-  const notice = historyError
-    ? { variant: "error" as const, message: historyError }
-    : draftStatus
-      ? { variant: draftStatus.variant, message: draftStatus.message }
-      : null;
+  const notice =
+    historyError ??
+    (draftStatus ? { variant: draftStatus.variant, message: draftStatus.message } : null);
 
   const historyPane = (
     <SavedConfigs

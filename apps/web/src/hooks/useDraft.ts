@@ -135,16 +135,45 @@ function fingerprint(design: DesignState): string {
   return JSON.stringify([design.qrType, design.formData, design.customization]);
 }
 
-/* Drops slots belonging to tabs that are never coming back. Runs on load and
-   again as the first response to a full-storage write, where reclaiming a dead
-   tab's draft is the cheapest room available. Never touches this tab's slot. */
-function collectGarbage(ownKey: string): void {
+/* Drops slots belonging to tabs that are never coming back. Runs after the
+   roll-call below, and again as the first response to a full-storage write
+   where reclaiming a dead tab's draft is the cheapest room available.
+
+   Slots in `live` belong to tabs that answered the roll-call and are exempt
+   from both rules. Without that, a sixth tab opening was enough to evict the
+   oldest slot from a tab that was still open and still editing: the cap exists
+   to bound abandoned drafts, and it was deleting live work instead. */
+function collectGarbage(ownKey: string, live: ReadonlySet<string> = new Set()): void {
   const expired = Date.now() - DRAFT_TTL_MS;
-  const others = readSlots().filter((slot) => slot.key !== ownKey);
+  const others = readSlots().filter((slot) => slot.key !== ownKey && !live.has(slot.key));
 
   for (const [index, slot] of others.entries()) {
     if (slot.record.updatedAt < expired || index >= MAX_SLOTS - 1) removeItem(slot.key);
   }
+}
+
+/* How tabs find out about one another.
+ *
+ * `sessionStorage` is per-tab, which is what makes it the right home for a tab
+ * id — except that duplicating a tab clones it, so the twin boots holding an id
+ * another tab is already writing under and the two silently share one slot,
+ * which is the collision per-tab slots were chosen to avoid. A roll-call
+ * settles it: every tab announces the id it is using, and a tab that hears its
+ * own id from somebody else moves to a fresh one.
+ *
+ * The `instance` nonce is the tiebreak. Two duplicates are alike in every
+ * respect that matters here, so "whoever else is here keeps it" would have both
+ * of them stand down; comparing nonces picks exactly one, and picks the same
+ * one on both sides. */
+const CHANNEL_NAME = "qr-draft-tabs";
+/* One round trip between tabs on the same machine — long enough for a reply,
+   short enough to land before the user has typed anything worth keeping. */
+const ROLL_CALL_MS = 250;
+
+interface RollCall {
+  type: "who" | "here";
+  id: string;
+  instance: string;
 }
 
 export interface DraftController {
@@ -158,6 +187,10 @@ export interface DraftController {
   applyDesign: (design: DesignState) => void;
   /** Tries the draft again after something else has freed space. */
   retryPersist: () => void;
+  /** True when this load put a previously-saved design back on the canvas. */
+  restored: boolean;
+  /** Drops the draft and starts from a blank design. */
+  discard: () => void;
   status: DraftStatus | null;
 }
 
@@ -172,14 +205,20 @@ export function useDraft(sharedDesign: DesignState | null): DraftController {
   const [boot] = useState(() => {
     const id = tabId();
     const ownKey = `${DRAFT_PREFIX}${id}`;
-    collectGarbage(ownKey);
-
     const own = readSlot(ownKey);
     // A tab with no draft of its own picks up the newest one going
     const restored = own ?? readSlots()[0] ?? null;
+    const instance =
+      typeof crypto.randomUUID === "function"
+        ? crypto.randomUUID()
+        : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
 
-    return { ownKey, restored, adopted: !own && restored !== null };
+    return { id, ownKey, restored, adopted: !own && restored !== null, instance };
   });
+
+  /* Which slot this tab writes to. It starts as the one its `sessionStorage` id
+     names and only moves if the roll-call finds that id already in use. */
+  const [ownKey, setOwnKey] = useState(boot.ownKey);
 
   const restoredDesign = sharedDesign ?? boot.restored?.design ?? null;
 
@@ -217,6 +256,118 @@ export function useDraft(sharedDesign: DesignState | null): DraftController {
   const markEdited = useCallback(() => {
     edited.current = true;
   }, []);
+
+  /* Slots belonging to tabs that answered the roll-call. Read by the degrade
+     ladder as well as the boot sweep, so it lives in a ref rather than state —
+     a write in flight must not wait for a render to learn who is alive. */
+  const live = useRef<Set<string>>(new Set());
+  /* What the write effect would persist right now, for the flush below, which
+     runs at a moment when re-rendering is no longer on the table. */
+  const pending = useRef<{ design: DesignState; key: string } | null>(null);
+
+  useEffect(() => {
+    pending.current = { design: { qrType, formData, customization }, key: ownKey };
+  }, [qrType, formData, customization, ownKey]);
+
+  /* The debounce is a window in which the design exists only in memory. A
+     reload rides it out, but the crash and the closed tab this feature exists
+     for do not — so the last edit is written on the way out instead of being
+     lost with the timer. `pagehide` is the event that survives bfcache and
+     mobile Safari; `visibilitychange` covers the app being backgrounded and
+     never coming back. */
+  useEffect(() => {
+    const flush = () => {
+      const now = pending.current;
+      if (!now || !edited.current) return;
+      const current = fingerprint(now.design);
+      if (current === lastWritten.current) return;
+      const written = writeItem(
+        now.key,
+        JSON.stringify({ v: 1, updatedAt: Date.now(), ...now.design }),
+      );
+      if (written.ok) lastWritten.current = current;
+    };
+    const onHide = () => {
+      if (document.visibilityState === "hidden") flush();
+    };
+
+    window.addEventListener("pagehide", flush);
+    document.addEventListener("visibilitychange", onHide);
+    return () => {
+      window.removeEventListener("pagehide", flush);
+      document.removeEventListener("visibilitychange", onHide);
+    };
+  }, []);
+
+  /* Roll-call: find out who else is open before touching anyone's slot. */
+  useEffect(() => {
+    if (typeof BroadcastChannel === "undefined") {
+      collectGarbage(boot.ownKey);
+      return;
+    }
+
+    const channel = new BroadcastChannel(CHANNEL_NAME);
+    let currentId = boot.id;
+    const heard = new Set<string>();
+
+    /* Moves this tab to a slot of its own, taking the design with it. Carrying
+       it over is the point: the contested slot stays with the other tab, so a
+       tab that moved out and waited for the next edit would leave its only
+       copy behind — and the tiebreak does not care which of the two had
+       already typed something. Whoever moves, moves with their work. */
+    const rekey = () => {
+      const design = pending.current?.design;
+      currentId = crypto.randomUUID();
+      writeItem(TAB_ID_KEY, currentId, "session");
+      const nextKey = `${DRAFT_PREFIX}${currentId}`;
+      lastWritten.current = null;
+      if (design) {
+        const written = writeItem(
+          nextKey,
+          JSON.stringify({ v: 1, updatedAt: Date.now(), ...design }),
+        );
+        if (written.ok) lastWritten.current = fingerprint(design);
+      }
+      setOwnKey(nextKey);
+      channel.postMessage({ type: "here", id: currentId, instance: boot.instance } as RollCall);
+    };
+
+    /* Handled as it arrives rather than collected and judged when the opening
+       roll-call closes: the tab that boots first has its window shut by the
+       time a duplicate of it appears, and it is just as likely to be the one
+       that has to move. */
+    channel.onmessage = (event: MessageEvent<RollCall>) => {
+      const msg = event.data;
+      if (!msg?.id || msg.instance === boot.instance) return;
+      heard.add(`${DRAFT_PREFIX}${msg.id}`);
+      // Answer with the id currently in use, so the other side can judge too
+      if (msg.type === "who") {
+        channel.postMessage({ type: "here", id: currentId, instance: boot.instance } as RollCall);
+      }
+      // Someone else is writing under this tab's id — the higher nonce stands down
+      if (msg.id === currentId && boot.instance > msg.instance) rekey();
+    };
+    channel.postMessage({ type: "who", id: currentId, instance: boot.instance } as RollCall);
+
+    const timer = setTimeout(() => {
+      live.current = heard;
+      collectGarbage(`${DRAFT_PREFIX}${currentId}`, heard);
+    }, ROLL_CALL_MS);
+
+    return () => {
+      clearTimeout(timer);
+      channel.close();
+    };
+  }, [boot]);
+
+  /* Starting over is destructive to work that has no other copy, so the caller
+     is handed back what it displaced rather than just a cleared canvas. */
+  const discard = useCallback(() => {
+    markEdited();
+    setQRTypeState("url");
+    setFormDataState(DEFAULT_FORM_DATA);
+    setCustomizationState(DEFAULT_CUSTOMIZATION);
+  }, [markEdited]);
 
   const setQRType = useCallback(
     (type: QRType) => {
@@ -272,12 +423,12 @@ export function useDraft(sharedDesign: DesignState | null): DraftController {
       const current = fingerprint({ qrType, formData, customization });
       if (current === lastWritten.current) return;
 
-      let result = writeItem(boot.ownKey, serialized);
+      let result = writeItem(ownKey, serialized);
 
       if (!result.ok && result.reason === "quota") {
         // Cheapest room first: drafts left behind by tabs that are gone
-        collectGarbage(boot.ownKey);
-        result = writeItem(boot.ownKey, serialized);
+        collectGarbage(ownKey, live.current);
+        result = writeItem(ownKey, serialized);
       }
 
       if (!result.ok && result.reason === "quota" && customization.logo) {
@@ -289,7 +440,7 @@ export function useDraft(sharedDesign: DesignState | null): DraftController {
           logoDropped: true,
           customization: { ...customization, logo: null },
         };
-        result = writeItem(boot.ownKey, JSON.stringify(withoutLogo));
+        result = writeItem(ownKey, JSON.stringify(withoutLogo));
         if (result.ok) {
           lastWritten.current = current;
           setStatus(STATUS["logo-dropped"]);
@@ -307,7 +458,7 @@ export function useDraft(sharedDesign: DesignState | null): DraftController {
     }, WRITE_DELAY_MS);
 
     return () => clearTimeout(timer);
-  }, [qrType, formData, customization, boot.ownKey, retries]);
+  }, [qrType, formData, customization, ownKey, retries]);
 
   return {
     qrType,
@@ -318,6 +469,8 @@ export function useDraft(sharedDesign: DesignState | null): DraftController {
     setCustomization,
     applyDesign,
     retryPersist,
+    restored: !sharedDesign && boot.restored !== null,
+    discard,
     status,
   };
 }

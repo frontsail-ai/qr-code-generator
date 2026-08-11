@@ -12,25 +12,59 @@ const STORAGE_KEY = "qr-saved-configs";
    out on their next reload (#42). Undo runs the same gauntlet: a take-back
    that cannot be written is one that expires with the tab, and it is offered
    to someone already recovering from a mistake. */
-function loadFromStorage(): SavedConfig[] {
+/* An entry this build cannot make sense of, kept exactly as it was found.
+   Skipping it in the list is right; deleting it is not. A newer build may have
+   written a QR type this one has never heard of — a rolled-back deploy, a
+   cached bundle, two tabs on either side of a release — and since the whole
+   list is rewritten on every save, pruning it here would erase it from disk on
+   the user's next download. It is parked with the index it held, so a build
+   that understands it again finds it where the user left it. */
+interface ForeignEntry {
+  index: number;
+  entry: unknown;
+}
+
+interface LoadedHistory {
+  configs: SavedConfig[];
+  foreign: ForeignEntry[];
+}
+
+function loadFromStorage(): LoadedHistory {
   const stored = readItem(STORAGE_KEY);
-  if (!stored) return [];
+  if (!stored) return { configs: [], foreign: [] };
 
   try {
     const parsed: unknown = JSON.parse(stored);
-    if (!Array.isArray(parsed)) return [];
+    if (!Array.isArray(parsed)) return { configs: [], foreign: [] };
+
+    const configs: SavedConfig[] = [];
+    const foreign: ForeignEntry[] = [];
 
     /* Entries written by older builds are missing fields the current one
        expects; `normalizeDesign` is the same gate the draft and share links go
        through, so one stale entry cannot take the whole list down with it. */
-    return parsed.flatMap((entry: Partial<SavedConfig>) => {
+    parsed.forEach((entry: Partial<SavedConfig>, index) => {
       const design = normalizeDesign(entry);
-      if (!design || typeof entry.id !== "string" || typeof entry.timestamp !== "string") return [];
-      return [{ id: entry.id, timestamp: entry.timestamp, ...design }];
+      if (design && typeof entry.id === "string" && typeof entry.timestamp === "string") {
+        configs.push({ id: entry.id, timestamp: entry.timestamp, ...design });
+      } else {
+        foreign.push({ index, entry });
+      }
     });
+
+    return { configs, foreign };
   } catch {
-    return [];
+    return { configs: [], foreign: [] };
   }
+}
+
+/* Puts the unreadable entries back before the list is written. Ascending index
+   order matters — each splice shifts everything after it. */
+function withForeign(configs: SavedConfig[], foreign: ForeignEntry[]): unknown[] {
+  if (foreign.length === 0) return configs;
+  const out: unknown[] = [...configs];
+  for (const { index, entry } of foreign) out.splice(Math.min(index, out.length), 0, entry);
+  return out;
 }
 
 function configsMatch(a: SaveConfigInput, b: SaveConfigInput): boolean {
@@ -73,7 +107,9 @@ interface UseSavedConfigsReturn {
 }
 
 export function useSavedConfigs(): UseSavedConfigsReturn {
-  const [savedConfigs, setSavedConfigs] = useState<SavedConfig[]>(loadFromStorage);
+  const [loaded] = useState(loadFromStorage);
+  const [savedConfigs, setSavedConfigs] = useState<SavedConfig[]>(loaded.configs);
+  const foreign = useRef(loaded.foreign);
 
   /* The list as it stands now, not as it stood when the caller was built. An
      undo lives inside a toast closure for six seconds, so reading the list
@@ -85,7 +121,7 @@ export function useSavedConfigs(): UseSavedConfigsReturn {
   const configsRef = useRef(savedConfigs);
 
   const commit = useCallback((next: SavedConfig[]): WriteResult => {
-    const result = writeItem(STORAGE_KEY, JSON.stringify(next));
+    const result = writeItem(STORAGE_KEY, JSON.stringify(withForeign(next, foreign.current)));
     if (result.ok) {
       configsRef.current = next;
       setSavedConfigs(next);

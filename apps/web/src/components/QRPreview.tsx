@@ -114,7 +114,7 @@ export function QRPreview({
 
   return (
     <section
-      className={`flex flex-col items-center gap-[18px] w-full ${
+      className={`relative flex flex-col items-center gap-[18px] w-full ${
         isDesktop
           ? ""
           : "plico-grid -mx-4 w-auto self-stretch px-4 -mt-6 pt-5 pb-5 border-b border-[var(--border-hairline)]"
@@ -191,12 +191,23 @@ export function QRPreview({
         </div>
       )}
 
-      {/* Storage trouble — the design is fine, keeping it is not */}
+      {/* Storage trouble — the design is fine, keeping it is not.
+
+          It appears while the user is mid-gesture, so it must not move the
+          button they are reaching for. On desktop the whole column is
+          vertically centred, which means anything added to the flow shifts the
+          export block by half the height it added — in either direction,
+          depending on where it goes. So on desktop it hangs below the section
+          out of flow, and the buttons do not move at all. On mobile the column
+          is top-aligned and the export bar is fixed to the viewport, so
+          ordinary flow already leaves both of them where they were. */}
       {notice && (
         <Note
           variant={notice.variant}
           role={notice.variant === "error" ? "alert" : "status"}
-          className="w-[328px] max-w-full"
+          className={`w-[328px] max-w-full ${
+            isDesktop ? "absolute top-full left-1/2 -translate-x-1/2 mt-3" : "order-last"
+          }`}
           data-testid="storage-notice"
         >
           {notice.message}
