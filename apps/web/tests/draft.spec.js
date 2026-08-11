@@ -182,7 +182,7 @@ test.describe("Working draft", () => {
 
       const toast = page.getByTestId("toast");
       await expect(toast).toContainText("Picked up where you left off");
-      await expect(toast).toBeInViewport();
+      await expect(toast).toBeInViewport({ ratio: 1 });
 
       // Taking the offer is the only route back to a blank canvas
       await page.getByRole("button", { name: "Undo" }).click();
@@ -538,14 +538,16 @@ test.describe("Working draft", () => {
         return hit === button || button.contains(hit);
       });
       expect(onTop).toBe(true);
-      await expect(page.getByRole("button", { name: "Download PNG" })).toBeInViewport();
+      await expect(page.getByRole("button", { name: "Download PNG" })).toBeInViewport({ ratio: 1 });
     });
 
     test("every QR type is on screen on a phone", async ({ page }) => {
       await page.setViewportSize({ width: 390, height: 844 });
       await page.goto("/");
       for (const type of ["URL", "Email", "Phone", "Text", "vCard"]) {
-        await expect(page.getByRole("button", { name: type, exact: true })).toBeInViewport();
+        await expect(page.getByRole("button", { name: type, exact: true })).toBeInViewport({
+          ratio: 1,
+        });
       }
       await page.getByRole("button", { name: "vCard", exact: true }).click();
       await expect(page.getByPlaceholder("John", { exact: true })).toBeVisible();
@@ -602,6 +604,66 @@ test.describe("Working draft", () => {
     });
   });
 
+  /* The canvas column is anchored to the top and grows downward, so on a window
+     shorter than the column its tail runs off the bottom — and the tail is
+     where the advisories and the export controls live. 1280x640 is an ordinary
+     1366x768 laptop once browser chrome is taken off (#61). */
+  test.describe("On a window too short for the column", () => {
+    const SHORT = { width: 1280, height: 640 };
+
+    test("brings the warning on screen instead of leaving it past the fold", async ({ page }) => {
+      await page.setViewportSize(SHORT);
+      await fillStorage(page, 0);
+      await urlInput(page).fill("short-window.example");
+      await settleDraft(page);
+
+      /* `ratio: 1` on purpose. The bare form passes on a single visible pixel,
+         which is exactly how a note sitting 50px below the fold was recorded as
+         being in the viewport. */
+      await expect(storageNotice(page)).toBeInViewport({ ratio: 1 });
+      // The advice is "download it to keep it", so that has to be reachable too
+      await expect(page.getByRole("button", { name: "Download PNG" })).toBeInViewport({ ratio: 1 });
+    });
+
+    test("keeps both on screen when a second advisory is already there", async ({ page }) => {
+      await page.setViewportSize(SHORT);
+      // White on white — the colour warning takes its own slice of the column
+      await page.getByRole("button", { name: "#FFFFFF" }).first().click();
+      await fillStorage(page, 0);
+      await urlInput(page).fill("two-advisories.example");
+      await settleDraft(page);
+
+      await expect(page.getByText(/scan/i).first()).toBeVisible();
+      await expect(storageNotice(page)).toBeInViewport({ ratio: 1 });
+      await expect(page.getByRole("button", { name: "Download PNG" })).toBeInViewport({ ratio: 1 });
+    });
+
+    /* Scrolling the document moves the canvas; the inspector is sticky, so the
+       field being typed into must not move underneath the cursor. */
+    test("does not move the field being typed into", async ({ page }) => {
+      await page.setViewportSize(SHORT);
+      const before = await urlInput(page).boundingBox();
+
+      await fillStorage(page, 0);
+      await urlInput(page).fill("field-stays-put.example");
+      await settleDraft(page);
+
+      const after = await urlInput(page).boundingBox();
+      expect(Math.round(after.y)).toBe(Math.round(before.y));
+    });
+
+    test("leaves a tall window alone", async ({ page }) => {
+      await page.setViewportSize({ width: 1280, height: 900 });
+      await fillStorage(page, 0);
+      await urlInput(page).fill("tall-window.example");
+      await settleDraft(page);
+
+      await expect(storageNotice(page)).toBeInViewport({ ratio: 1 });
+      // Nothing to scroll to, so nothing scrolled
+      expect(await page.evaluate(() => Math.round(window.scrollY))).toBe(0);
+    });
+  });
+
   /* Storage that silently refuses to store is the failure this whole feature
      exists to stop, so it has to be loud in the place the user is looking. */
   test.describe("When storage is full", () => {
@@ -612,7 +674,7 @@ test.describe("Working draft", () => {
       await settleDraft(page);
 
       await expect(storageNotice(page)).toBeVisible();
-      await expect(storageNotice(page)).toBeInViewport();
+      await expect(storageNotice(page)).toBeInViewport({ ratio: 1 });
       await expect(storageNotice(page)).toHaveText(/storage is full/i);
       await expect(storageNotice(page)).toHaveAttribute("role", "alert");
     });
@@ -633,7 +695,7 @@ test.describe("Working draft", () => {
       await expect(storageNotice(page)).toBeVisible();
       const after = await page.getByRole("button", { name: "Download PNG" }).boundingBox();
       expect(after.y).toBe(before.y);
-      await expect(storageNotice(page)).toBeInViewport();
+      await expect(storageNotice(page)).toBeInViewport({ ratio: 1 });
     });
 
     test("keeps the design when only the logo does not fit", async ({ page }) => {
@@ -701,7 +763,7 @@ test.describe("Working draft", () => {
       await page.getByRole("button", { name: "Undo" }).click();
 
       await expect(storageNotice(page)).toBeVisible();
-      await expect(storageNotice(page)).toBeInViewport();
+      await expect(storageNotice(page)).toBeInViewport({ ratio: 1 });
       await expect(storageNotice(page)).toHaveText(/could not be put back/i);
       // And the sidebar still agrees with storage rather than with the offer
       await expect(page.getByTestId("history-card")).toHaveCount(0);

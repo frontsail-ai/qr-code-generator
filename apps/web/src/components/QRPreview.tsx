@@ -1,5 +1,5 @@
 import { Download, FileCode, ScanLine, Share2, TriangleAlert } from "lucide-react";
-import { useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useDebounce } from "../hooks/useDebounce";
 import { useIsDesktop } from "../hooks/useMediaQuery";
 import { RENDER_STALLED_ERROR, useQRCode } from "../hooks/useQRCode";
@@ -29,6 +29,7 @@ export function QRPreview({
   notice,
 }: QRPreviewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const noticeRef = useRef<HTMLDivElement>(null);
   const isDesktop = useIsDesktop();
 
   const qrData = useMemo(() => {
@@ -59,6 +60,27 @@ export function QRPreview({
   // Colour scannability heuristic — warns, never locks (thresholds are
   // measured under ideal conditions; see packages/core/src/scanRisk.ts)
   const scanRisk = useMemo(() => assessScanRisk(debouncedOptions), [debouncedOptions]);
+
+  /* The column is anchored to the top of the canvas and grows downward, so on a
+     short window its tail runs past the fold — and its tail is where the
+     advisories and the export controls live. A warning nobody scrolls to is one
+     nobody reads, and there is nothing on screen to suggest scrolling: at
+     1280x640 this note sits at y643 with the page ending at 693 (#61).
+
+     `block: "nearest"` scrolls the least it can and does nothing at all when
+     the note is already on screen, which is every window taller than about
+     700px. Scrolling the document moves the canvas; the inspector is sticky, so
+     the field being typed into stays exactly where it was. Keyed on the message
+     so a note that changes what it says is shown again, and one that merely
+     re-renders is not. */
+  const message = notice?.message;
+  useEffect(() => {
+    if (!message) return;
+    noticeRef.current?.scrollIntoView({
+      block: "nearest",
+      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+    });
+  }, [message]);
 
   const errorMessage = error?.includes("code length overflow")
     ? "This content is too long to fit in a QR code. Shorten it to generate one."
@@ -217,21 +239,21 @@ export function QRPreview({
 
       {/* Storage trouble — the design is fine, keeping it is not.
 
-          It appears while the user is mid-gesture, so it must not move the
-          button they are reaching for. On desktop the whole column is
-          vertically centred, which means anything added to the flow shifts the
-          export block by half the height it added — in either direction,
-          depending on where it goes. So on desktop it hangs below the section
-          out of flow, and the buttons do not move at all. On mobile the column
-          is top-aligned and the export bar is fixed to the viewport, so
-          ordinary flow already leaves both of them where they were. */}
+          An ordinary sibling, like every other advisory here. It used to hang
+          out of flow to dodge the shift a vertically centred column produced,
+          and #66 removed the centring that caused it — measured before and
+          after, the hack was worth 6px of position and nothing else. */}
       {notice && (
         <Note
+          ref={noticeRef}
           variant={notice.variant}
           role={notice.variant === "error" ? "alert" : "status"}
-          className={`w-[328px] max-w-full ${
-            isDesktop ? "absolute top-full left-1/2 -translate-x-1/2 mt-3" : "order-last"
-          }`}
+          /* Scroll margin so bringing it into view leaves it clear of the
+             bottom edge rather than flush against it. It needs somewhere to go:
+             the canvas carries matching bottom padding, because this note is
+             the last thing in the column and a page cannot scroll past its own
+             content. */
+          className="w-[328px] max-w-full order-last scroll-mb-2"
           data-testid="storage-notice"
         >
           {notice.message}

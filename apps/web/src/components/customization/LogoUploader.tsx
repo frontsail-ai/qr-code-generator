@@ -84,7 +84,16 @@ export function LogoUploader({ value, error, onFile, onRemove }: LogoUploaderPro
       {/* Sits outside the branch above: a bad file can arrive while a good logo
           is already set, and the rejection has to be visible either way */}
       {error && (
-        <Note ref={errorRef} variant="error" icon={CircleAlert} role="alert">
+        <Note
+          ref={errorRef}
+          variant="error"
+          icon={CircleAlert}
+          role="alert"
+          /* Clearance so scrolling it into view leaves it inside the panel
+             rather than resting on the edge, where a fractional height spills
+             it a sliver past the bottom of the window. */
+          className="scroll-mb-2"
+        >
           {error}
         </Note>
       )}
