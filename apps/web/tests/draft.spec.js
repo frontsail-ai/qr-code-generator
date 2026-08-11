@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { expect, test } from "@playwright/test";
+import { expectUnobstructed } from "./support/reachability.js";
 
 /* A real PNG big enough to matter against a ~5 M character storage budget:
    175 KB of file becomes ~234 K characters of base64 once it is a data URL. */
@@ -529,16 +530,11 @@ test.describe("Working draft", () => {
       await page.waitForTimeout(500);
 
       await expect(page.getByRole("region", { name: "Analytics consent" })).toBeVisible();
-      const onTop = await page.evaluate(() => {
-        const button = [...document.querySelectorAll("button")].find((b) =>
-          b.textContent.includes("Download PNG"),
-        );
-        const box = button.getBoundingClientRect();
-        const hit = document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2);
-        return hit === button || button.contains(hit);
-      });
-      expect(onTop).toBe(true);
-      await expect(page.getByRole("button", { name: "Download PNG" })).toBeInViewport({ ratio: 1 });
+      await expectUnobstructed(
+        page,
+        page.getByRole("button", { name: "Download PNG" }),
+        "Download",
+      );
     });
 
     test("every QR type is on screen on a phone", async ({ page }) => {
@@ -617,12 +613,32 @@ test.describe("Working draft", () => {
       await urlInput(page).fill("short-window.example");
       await settleDraft(page);
 
-      /* `ratio: 1` on purpose. The bare form passes on a single visible pixel,
-         which is exactly how a note sitting 50px below the fold was recorded as
-         being in the viewport. */
-      await expect(storageNotice(page)).toBeInViewport({ ratio: 1 });
+      /* Unobstructed, not merely in the viewport. The bare geometric form
+         passes on a single visible pixel, and passes just as happily on a note
+         lying underneath the consent banner. */
+      await expectUnobstructed(page, storageNotice(page), "the storage notice");
       // The advice is "download it to keep it", so that has to be reachable too
-      await expect(page.getByRole("button", { name: "Download PNG" })).toBeInViewport({ ratio: 1 });
+      await expectUnobstructed(
+        page,
+        page.getByRole("button", { name: "Download PNG" }),
+        "Download",
+      );
+    });
+
+    /* The banner is fixed to the bottom of the window, which is exactly where
+       scrolling something into view puts it. Every geometric check called this
+       visible while the banner covered it outright. */
+    test("clears the consent banner, which sits where it would otherwise land", async ({
+      page,
+    }) => {
+      await page.setViewportSize(SHORT);
+      // No dismissal: this is a first visit, banner still up
+      await expect(page.getByRole("region", { name: "Analytics consent" })).toBeVisible();
+      await fillStorage(page, 0);
+      await urlInput(page).fill("banner-still-up.example");
+      await settleDraft(page);
+
+      await expectUnobstructed(page, storageNotice(page), "the storage notice");
     });
 
     test("keeps both on screen when a second advisory is already there", async ({ page }) => {
@@ -634,8 +650,12 @@ test.describe("Working draft", () => {
       await settleDraft(page);
 
       await expect(page.getByText(/scan/i).first()).toBeVisible();
-      await expect(storageNotice(page)).toBeInViewport({ ratio: 1 });
-      await expect(page.getByRole("button", { name: "Download PNG" })).toBeInViewport({ ratio: 1 });
+      await expectUnobstructed(page, storageNotice(page), "the storage notice");
+      await expectUnobstructed(
+        page,
+        page.getByRole("button", { name: "Download PNG" }),
+        "Download",
+      );
     });
 
     /* Scrolling the document moves the canvas; the inspector is sticky, so the
@@ -658,7 +678,7 @@ test.describe("Working draft", () => {
       await urlInput(page).fill("tall-window.example");
       await settleDraft(page);
 
-      await expect(storageNotice(page)).toBeInViewport({ ratio: 1 });
+      await expectUnobstructed(page, storageNotice(page), "the storage notice");
       // Nothing to scroll to, so nothing scrolled
       expect(await page.evaluate(() => Math.round(window.scrollY))).toBe(0);
     });
@@ -679,23 +699,33 @@ test.describe("Working draft", () => {
       await expect(storageNotice(page)).toHaveAttribute("role", "alert");
     });
 
-    /* The notice arrives while the user is reaching for Download. On desktop
-       the column is vertically centred, so anything added to the flow moves
-       that button by half the height it added — which is how a warning about
-       losing work ends up making you misclick. */
+    /* The notice arrives while the user is reaching for Download, and must not
+       reflow the column underneath it — that is how a warning about losing work
+       ends up making you misclick.
+
+       Measured in page coordinates, not viewport ones. The page may well scroll
+       when the note appears, to lift it clear of the fold and of the consent
+       banner, and that moves every viewport coordinate on the canvas at once
+       without anything having reflowed. What must not change is where the
+       button sits in the document. */
+    const pageY = async (locator, page) => {
+      const box = await locator.boundingBox();
+      return Math.round(box.y + (await page.evaluate(() => window.scrollY)));
+    };
+
     test("appears without moving the button the user is reaching for", async ({ page }) => {
       await urlInput(page).fill("no-shift.example");
       await settleDraft(page);
-      const before = await page.getByRole("button", { name: "Download PNG" }).boundingBox();
+      const before = await pageY(page.getByRole("button", { name: "Download PNG" }), page);
 
       await fillStorage(page, 0);
       await urlInput(page).fill("no-shift-grown.example");
       await settleDraft(page);
 
       await expect(storageNotice(page)).toBeVisible();
-      const after = await page.getByRole("button", { name: "Download PNG" }).boundingBox();
-      expect(after.y).toBe(before.y);
-      await expect(storageNotice(page)).toBeInViewport({ ratio: 1 });
+      const after = await pageY(page.getByRole("button", { name: "Download PNG" }), page);
+      expect(after).toBe(before);
+      await expectUnobstructed(page, storageNotice(page), "the storage notice");
     });
 
     test("keeps the design when only the logo does not fit", async ({ page }) => {
