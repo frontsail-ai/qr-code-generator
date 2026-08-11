@@ -135,6 +135,23 @@ function fingerprint(design: DesignState): string {
   return JSON.stringify([design.qrType, design.formData, design.customization]);
 }
 
+/* Whether the last write is still where it was put.
+ *
+ * The fingerprint answers "has the design changed since I wrote it?", which is
+ * only half the question — the other half is whether what was written is still
+ * there. `localStorage` is not private to this hook: another tab's sweep can
+ * take a slot (see `collectGarbage`), the browser can evict under pressure, and
+ * the user can clear site data with the tab still open. Skipping a write on the
+ * strength of an in-memory record alone meant that the moment any of those
+ * happened, the draft was never written again for the rest of the session —
+ * silently, with the work still on screen looking saved (#65).
+ *
+ * Costs nothing worth measuring: 0.001 ms against a 2.8 M-character value, so
+ * the comparison it guards is still the expensive half. */
+function slotHolds(key: string): boolean {
+  return readItem(key) !== null;
+}
+
 /* Drops slots belonging to tabs that are never coming back. Runs after the
    roll-call below, and again as the first response to a full-storage write
    where reclaiming a dead tab's draft is the cheapest room available.
@@ -280,7 +297,7 @@ export function useDraft(sharedDesign: DesignState | null): DraftController {
       const now = pending.current;
       if (!now || !edited.current) return;
       const current = fingerprint(now.design);
-      if (current === lastWritten.current) return;
+      if (current === lastWritten.current && slotHolds(now.key)) return;
       const written = writeItem(
         now.key,
         JSON.stringify({ v: 1, updatedAt: Date.now(), ...now.design }),
@@ -298,6 +315,39 @@ export function useDraft(sharedDesign: DesignState | null): DraftController {
       document.removeEventListener("visibilitychange", onHide);
     };
   }, []);
+
+  /* Noticing that the slot went missing.
+   *
+   * Verifying before a write is only worth anything if a write is attempted,
+   * and the write is edge-triggered: its effect re-runs when the design
+   * changes and at no other time. A design nobody is editing any more is
+   * exactly the one at risk here, so the two moments the store can go out from
+   * under it get their own trigger — another document changing it, and this tab
+   * being looked at again after time away. Both simply re-arm the write; the
+   * check of whether one is actually needed stays in one place. */
+  useEffect(() => {
+    const recheck = () => {
+      if (!edited.current || slotHolds(ownKey)) return;
+      lastWritten.current = null;
+      setRetries((n) => n + 1);
+    };
+    /* `key === null` is the whole store being cleared; anything else is only
+       our business when it names our own slot. Same-document changes never
+       raise this — those are the ones this hook made itself. */
+    const onStorage = (event: StorageEvent) => {
+      if (event.key === null || event.key === ownKey) recheck();
+    };
+    const onVisible = () => {
+      if (document.visibilityState === "visible") recheck();
+    };
+
+    window.addEventListener("storage", onStorage);
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      window.removeEventListener("storage", onStorage);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [ownKey]);
 
   /* Roll-call: find out who else is open before touching anyone's slot. */
   useEffect(() => {
@@ -421,7 +471,7 @@ export function useDraft(sharedDesign: DesignState | null): DraftController {
          before spending. The timestamp is excluded from the comparison so an
          unchanged design does not look new every time. */
       const current = fingerprint({ qrType, formData, customization });
-      if (current === lastWritten.current) return;
+      if (current === lastWritten.current && slotHolds(ownKey)) return;
 
       let result = writeItem(ownKey, serialized);
 
