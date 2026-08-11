@@ -57,6 +57,105 @@ test.describe("Working draft", () => {
 
   /* The draft is written on a trailing debounce, which is a window where the
      design exists only in memory. A reload waits it out; a crash does not. */
+  /* The hook keeps an in-memory record of what it last wrote, so it can skip
+     re-serialising a design that has not changed. That record is a belief about
+     a store this tab does not own: another tab's sweep takes slots, the browser
+     evicts under pressure, and the user can clear site data with the tab open.
+     Believing it without checking meant the draft was never written again for
+     the rest of the session, silently, with the work still on screen (#65). */
+  test.describe("When the stored draft disappears underneath it", () => {
+    const draftKey = (page) =>
+      page.evaluate(() => Object.keys(localStorage).find((k) => k.startsWith("qr-draft:")) ?? null);
+
+    test("writes it again, without waiting for the design to change", async ({ context, page }) => {
+      await urlInput(page).fill("still-on-screen.example");
+      await settleDraft(page);
+      const key = await draftKey(page);
+      expect(key).not.toBe(null);
+
+      /* Taken by another document, which is how it actually goes — a sweep in
+         another tab, or the user clearing site data. Deleting it from this page
+         would raise no `storage` event, because a document is not told about
+         its own writes. */
+      const elsewhere = await context.newPage();
+      await elsewhere.goto("/");
+      await elsewhere.evaluate((k) => localStorage.removeItem(k), key);
+      await elsewhere.close();
+
+      /* No further edit: the design is the same one the hook believes it has
+         already written, which is exactly the case that used to be skipped. */
+      await expect.poll(() => draftKey(page), { timeout: 4000 }).not.toBe(null);
+
+      await page.reload();
+      await expect(urlInput(page)).toHaveValue("still-on-screen.example");
+    });
+
+    /* Site data cleared from the browser's own settings raises no event in an
+       open tab, so nothing re-arms the write. The way out is the last chance to
+       notice, and it takes it. */
+    test("writes it on the way out when nothing announced the loss", async ({ page }) => {
+      await urlInput(page).fill("quietly-lost.example");
+      await settleDraft(page);
+      await page.evaluate(() => {
+        for (const k of Object.keys(localStorage)) {
+          if (k.startsWith("qr-draft:")) localStorage.removeItem(k);
+        }
+      });
+
+      await page.reload();
+      await expect(urlInput(page)).toHaveValue("quietly-lost.example");
+    });
+
+    test("still flushes on the way out when the slot went missing", async ({ page }) => {
+      await urlInput(page).fill("flush-after-loss.example");
+      await settleDraft(page);
+      await page.evaluate(() => {
+        for (const key of Object.keys(localStorage)) {
+          if (key.startsWith("qr-draft:")) localStorage.removeItem(key);
+        }
+        // Freeze the debounce so only the pagehide flush can write
+        window.setTimeout = () => 0;
+      });
+      await page.evaluate(() => window.dispatchEvent(new PageTransitionEvent("pagehide")));
+
+      expect(await draftKey(page)).not.toBe(null);
+    });
+
+    /* A tab that cannot answer the roll-call — throttled, frozen, or simply a
+       browser without BroadcastChannel — looks abandoned to every other tab. */
+    test("recovers when another tab sweeps the slot away", async ({ context, page }) => {
+      const sleeper = await context.newPage();
+      await sleeper.addInitScript(() => {
+        delete window.BroadcastChannel;
+      });
+      await sleeper.goto("/");
+      await urlInput(sleeper).fill("the-sleepers-work.example");
+      await settleDraft(sleeper);
+      const own = await sleeper.evaluate(() => sessionStorage.getItem("qr-tab-id"));
+
+      // Left open long enough that the sweep treats it as abandoned
+      await sleeper.evaluate((id) => {
+        const key = `qr-draft:${id}`;
+        const record = JSON.parse(localStorage.getItem(key));
+        record.updatedAt = Date.now() - 8 * 24 * 60 * 60 * 1000;
+        localStorage.setItem(key, JSON.stringify(record));
+      }, own);
+
+      await page.reload();
+      await page.waitForTimeout(600);
+
+      // The sleeper is still open and still holding work nobody else has
+      await expect
+        .poll(() => sleeper.evaluate((id) => !!localStorage.getItem(`qr-draft:${id}`), own), {
+          timeout: 4000,
+        })
+        .toBe(true);
+      await sleeper.reload();
+      await expect(urlInput(sleeper)).toHaveValue("the-sleepers-work.example");
+      await sleeper.close();
+    });
+  });
+
   test.describe("Leaving in a hurry", () => {
     test("keeps the last edit when the page goes away mid-debounce", async ({ page }) => {
       await urlInput(page).fill("typed-and-gone.example");
@@ -351,6 +450,24 @@ test.describe("Working draft", () => {
       page.evaluate(() =>
         JSON.parse(localStorage.getItem("qr-saved-configs") ?? "[]").map((c) => c.id),
       );
+
+    /* The entries to carry over are whatever is unreadable *now*. Remembering
+       them from boot meant that clearing site data and then saving wrote them
+       back — restoring entries the user had just deleted (#65). */
+    test("does not write back an entry that is no longer there", async ({ page }) => {
+      await seedWithForeign(page);
+      await page.reload();
+
+      await page.evaluate(() => localStorage.clear());
+
+      await urlInput(page).fill("after-the-wipe.example");
+      await page.waitForTimeout(400);
+      const download = page.waitForEvent("download");
+      await page.getByRole("button", { name: "Download PNG" }).click();
+      await download;
+
+      await expect.poll(() => storedIds(page)).not.toContain("from-the-future");
+    });
 
     test("skips what it cannot read without deleting it", async ({ page }) => {
       await seedWithForeign(page);

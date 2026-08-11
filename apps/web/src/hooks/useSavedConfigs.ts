@@ -109,7 +109,6 @@ interface UseSavedConfigsReturn {
 export function useSavedConfigs(): UseSavedConfigsReturn {
   const [loaded] = useState(loadFromStorage);
   const [savedConfigs, setSavedConfigs] = useState<SavedConfig[]>(loaded.configs);
-  const foreign = useRef(loaded.foreign);
 
   /* The list as it stands now, not as it stood when the caller was built. An
      undo lives inside a toast closure for six seconds, so reading the list
@@ -121,7 +120,15 @@ export function useSavedConfigs(): UseSavedConfigsReturn {
   const configsRef = useRef(savedConfigs);
 
   const commit = useCallback((next: SavedConfig[]): WriteResult => {
-    const result = writeItem(STORAGE_KEY, JSON.stringify(withForeign(next, foreign.current)));
+    /* The entries to carry over are read now, not remembered from boot. What is
+       unreadable is a property of what is in storage at the moment of writing,
+       and storage moves underneath this tab: another tab may have added one, and
+       the user may have cleared the lot with this tab still open — in which case
+       writing back a remembered entry resurrects something they deleted (#65). */
+    const result = writeItem(
+      STORAGE_KEY,
+      JSON.stringify(withForeign(next, loadFromStorage().foreign)),
+    );
     if (result.ok) {
       configsRef.current = next;
       setSavedConfigs(next);
