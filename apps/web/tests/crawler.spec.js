@@ -19,6 +19,11 @@ test.describe("A crawler without JavaScript", () => {
     expect(body, "the H1 must exist outside <head>").toContain("QR Code Generator");
     expect(body).toContain("Runs entirely in your browser");
     expect(body).toContain("Nothing to encode yet");
+
+    // The discovery section (#79) — the page's indexable words
+    expect(body).toContain("Why this generator");
+    expect(body).toContain("Codes never expire");
+    expect(body).toContain("no sign-up, no watermark");
   });
 
   test("sees a styled, readable page without executing a line of JS", async ({ page }) => {
@@ -27,6 +32,7 @@ test.describe("A crawler without JavaScript", () => {
     await expect(page.getByText("Nothing to encode yet")).toBeVisible();
     // The prerender answers min-width queries as true, so the crawler gets
     // the desktop layout — the fullest content surface.
-    await expect(page.getByText("Runs entirely in your browser")).toBeVisible();
+    await expect(page.getByText("Runs entirely in your browser", { exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Why this generator" })).toBeVisible();
   });
 });
