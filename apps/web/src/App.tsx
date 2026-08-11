@@ -1,5 +1,6 @@
 import { ImagePlus } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { AboutSection } from "./components/AboutSection";
 import { AgentSetupDialog } from "./components/AgentSetupDialog";
 import { ConsentBanner } from "./components/ConsentBanner";
 import { CustomizationPanel } from "./components/customization";
@@ -432,7 +433,11 @@ function App() {
         hasContent={hasContent}
       />
 
-      <div className="flex-1 flex min-h-0">
+      {/* min-h pins the workspace to a full viewport minus the header: without
+          it, the AboutSection below would join the flex distribution and
+          compress this row on tall content. The workspace owns the first
+          viewport; discovery content begins below the fold. */}
+      <div className="flex-1 flex min-h-[calc(100vh-3.5rem)]">
         {/* History rail — desktop */}
         {isDesktop && (
           <aside
@@ -554,6 +559,8 @@ function App() {
           </div>
         </div>
       )}
+
+      <AboutSection />
 
       <Tray
         toast={toast}
