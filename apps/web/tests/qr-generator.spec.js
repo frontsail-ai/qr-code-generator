@@ -1540,9 +1540,117 @@ test.describe("QR Code Generator", () => {
          be a worse surprise than losing the older offer */
       await expect(page.getByTestId("toast")).toContainText("Logo removed");
       await page.getByRole("button", { name: "Undo" }).click();
-
       await expect(page.getByRole("button", { name: "Remove" })).toBeVisible();
-      expect(await storedUrls(page)).toEqual([]);
+
+      /* They do not merge, but neither does the newer one destroy the older:
+         taking the top reveals what was under it (#57). */
+      await expect(page.getByTestId("toast")).toContainText("Design deleted");
+      await page.getByRole("button", { name: "Undo" }).click();
+      expect(await storedUrls(page)).toEqual(["design.example"]);
+    });
+
+    /* Three unrelated destructive actions, three take-backs, newest first.
+       Before #57's fix the store held one group, so the first two were
+       unreachable the moment the next one happened. */
+    test("keeps a take-back for each unrelated action, newest first", async ({ page }) => {
+      await seedHistory(page, ["alpha.example", "beta.example"]);
+      await page.getByPlaceholder("frontsail.ai").fill("in-progress.example");
+      await page.waitForTimeout(400);
+
+      // 1. restore — overwrites the in-progress canvas
+      await page.getByTestId("history-card").first().hover();
+      await page.getByRole("button", { name: "Restore" }).first().click();
+      await expect(page.getByPlaceholder("frontsail.ai")).toHaveValue("alpha.example");
+
+      // 2. delete — destroys a saved design
+      await page.getByTestId("history-card").nth(1).hover();
+      await page.getByRole("button", { name: "Delete" }).nth(1).click();
+      expect(await storedUrls(page)).toEqual(["alpha.example"]);
+
+      // 3. logo — destroys a data URL the app cannot re-derive
+      await page.locator('input[type="file"]').setInputFiles({
+        name: "logo.png",
+        mimeType: "image/png",
+        buffer: Buffer.from(ONE_BY_ONE_PNG_BASE64, "base64"),
+      });
+      await expect(page.getByRole("button", { name: "Remove" })).toBeVisible();
+      await page.getByRole("button", { name: "Remove" }).click();
+      await expect(page.getByText("Click to upload logo")).toBeVisible();
+
+      // Unwound in reverse: logo, then the design, then the canvas
+      await expect(page.getByTestId("toast")).toContainText("Logo removed");
+      await page.getByRole("button", { name: "Undo" }).click();
+      await expect(page.getByRole("button", { name: "Remove" })).toBeVisible();
+
+      await expect(page.getByTestId("toast")).toContainText("Design deleted");
+      await page.getByRole("button", { name: "Undo" }).click();
+      expect(await storedUrls(page)).toEqual(["alpha.example", "beta.example"]);
+
+      await expect(page.getByTestId("toast")).toContainText("Design restored");
+      await page.getByRole("button", { name: "Undo" }).click();
+      await expect(page.getByPlaceholder("frontsail.ai")).toHaveValue("in-progress.example");
+
+      // Stack empty — nothing left to offer
+      await expect(page.getByRole("button", { name: "Undo" })).toHaveCount(0);
+    });
+
+    /* Same three kinds as above in a different interleaving — the logo arrives
+       between the restore and the delete. Order-independence is the property
+       under test, so an ordering that only differs in where a non-destructive
+       step lands is worth its 1.6 seconds. */
+    test("unwinds correctly whatever order the actions arrive in", async ({ page }) => {
+      await seedHistory(page, ["beta.example", "alpha.example"]);
+      await page.getByPlaceholder("frontsail.ai").fill("in-progress-work.example");
+      await page.waitForTimeout(400);
+
+      await page.getByTestId("history-card").first().hover();
+      await page.getByRole("button", { name: "Restore" }).first().click();
+      await expect(page.getByPlaceholder("frontsail.ai")).toHaveValue("beta.example");
+
+      await page.locator('input[type="file"]').setInputFiles({
+        name: "logo.png",
+        mimeType: "image/png",
+        buffer: Buffer.from(ONE_BY_ONE_PNG_BASE64, "base64"),
+      });
+      await expect(page.getByRole("button", { name: "Remove" })).toBeVisible();
+
+      await page.getByTestId("history-card").first().hover();
+      await page.getByRole("button", { name: "Delete" }).first().click();
+      expect(await storedUrls(page)).toEqual(["alpha.example"]);
+
+      await page.getByRole("button", { name: "Remove" }).click();
+      await expect(page.getByText("Click to upload logo")).toBeVisible();
+
+      await page.getByRole("button", { name: "Undo" }).click();
+      await expect(page.getByRole("button", { name: "Remove" })).toBeVisible();
+      await page.getByRole("button", { name: "Undo" }).click();
+      expect(await storedUrls(page)).toEqual(["beta.example", "alpha.example"]);
+      await page.getByRole("button", { name: "Undo" }).click();
+      await expect(page.getByPlaceholder("frontsail.ai")).toHaveValue("in-progress-work.example");
+    });
+
+    test("a burst still coalesces, and sits on top of what came before", async ({ page }) => {
+      await seedHistory(page, ["one.example", "two.example", "three.example"]);
+      await page.getByPlaceholder("frontsail.ai").fill("canvas.example");
+      await page.waitForTimeout(400);
+
+      await page.getByTestId("history-card").first().hover();
+      await page.getByRole("button", { name: "Restore" }).first().click();
+      await expect(page.getByPlaceholder("frontsail.ai")).toHaveValue("one.example");
+
+      // Two deletes merge into one offer, which lands above the restore
+      await page.getByTestId("history-card").first().hover();
+      await page.getByRole("button", { name: "Delete" }).first().click();
+      await page.getByTestId("history-card").first().hover();
+      await page.getByRole("button", { name: "Delete" }).first().click();
+      await expect(page.getByTestId("toast")).toContainText("2 designs deleted");
+
+      await page.getByRole("button", { name: "Undo" }).click();
+      expect(await storedUrls(page)).toEqual(["one.example", "two.example", "three.example"]);
+
+      await expect(page.getByTestId("toast")).toContainText("Design restored");
+      await page.getByRole("button", { name: "Undo" }).click();
+      await expect(page.getByPlaceholder("frontsail.ai")).toHaveValue("canvas.example");
     });
   });
 });
