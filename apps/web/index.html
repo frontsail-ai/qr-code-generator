@@ -32,15 +32,11 @@
     <meta property="og:image:height" content="630" />
     <meta name="twitter:card" content="summary_large_image" />
 
-    <!-- IBM Plex loads here (not via CSS @import): the production CSS bundler
-         drops @import rules that end up mid-file, which silently disabled the
-         brand fonts in deployed builds -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap"
-    />
+    <!-- IBM Plex is self-hosted (#81): imported as JS imports in main.tsx and
+         bundled by Vite into the hashed CSS asset. Never reintroduce a CSS
+         @import for fonts - the production bundler drops @import rules that
+         end up mid-file, which silently disabled the brand fonts in deployed
+         builds. The CSP's font-src 'self' makes any third-party font loud. -->
 
     <script type="application/ld+json">
       {
