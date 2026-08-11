@@ -35,6 +35,12 @@ jobs:
       - name: Run lint
         run: just lint-ci
 
+      # A static check of .claude-plugin/*.json and the skill; needs no auth.
+      - name: Validate Claude plugin
+        run: |
+          npm install -g @anthropic-ai/claude-code
+          just validate-plugin
+
       - name: Run tests
         run: just test
 

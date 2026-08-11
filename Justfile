@@ -11,6 +11,10 @@ lint-ci:
     vp install
     vp check
 
+[doc("Validate the Claude plugin manifests (needs the claude CLI)")]
+validate-plugin:
+    claude plugin validate . --strict
+
 [doc("Run tests (core unit tests + web e2e)")]
 test *TEST_FLAGS:
     vp run -r test {{ TEST_FLAGS }}
