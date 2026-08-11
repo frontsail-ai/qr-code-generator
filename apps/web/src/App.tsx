@@ -402,7 +402,7 @@ function App() {
             layout that was already correct. Anything added below the code from
             here on grows downward and leaves it alone. */}
         <main
-          className={`${isDesktop ? "plico-grid" : "bg-[var(--surface-page)]"} flex-1 relative flex flex-col items-center gap-[18px] min-w-0 px-4 py-6 lg:pt-10 pb-[calc(6rem+var(--consent-inset))] lg:pb-[var(--consent-inset)]`}
+          className={`${isDesktop ? "plico-grid" : "bg-[var(--surface-page)]"} flex-1 relative flex flex-col items-center gap-[18px] min-w-0 px-4 py-6 lg:pt-10 pb-[calc(6rem+var(--consent-inset))] lg:pb-[calc(1.5rem+var(--consent-inset))]`}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}

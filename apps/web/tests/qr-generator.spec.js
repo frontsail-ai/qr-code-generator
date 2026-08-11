@@ -665,7 +665,7 @@ test.describe("QR Code Generator", () => {
          which starts scrolled past the logo panel. `toBeVisible` is satisfied
          by a rendered-but-off-screen node, so assert the viewport explicitly —
          a message the user never sees is the silent drop by another name. */
-      await expect(page.getByRole("alert")).toBeInViewport();
+      await expect(page.getByRole("alert")).toBeInViewport({ ratio: 1 });
       await expect(page.getByText("Click to upload logo")).toBeVisible();
     });
 
@@ -829,7 +829,7 @@ test.describe("QR Code Generator", () => {
       const warning = page.getByText("too light to scan reliably", { exact: false });
       await expect(warning).toBeVisible();
       // A warning drawn off-screen would satisfy "the code didn't move" for the wrong reason
-      await expect(warning).toBeInViewport();
+      await expect(warning).toBeInViewport({ ratio: 1 });
 
       const after = await sheet.boundingBox();
       expect(after.y).toBeCloseTo(before.y, 0);
@@ -867,7 +867,7 @@ test.describe("QR Code Generator", () => {
       // And everything below it is still gettable
       const download = page.getByRole("button", { name: "Download PNG" });
       await download.scrollIntoViewIfNeeded();
-      await expect(download).toBeInViewport();
+      await expect(download).toBeInViewport({ ratio: 1 });
       await expect(download).toBeEnabled();
     });
 
@@ -1330,7 +1330,7 @@ test.describe("QR Code Generator", () => {
          can actually reach — `toBeVisible()` alone would pass off-screen */
       const toast = page.getByTestId("toast");
       await expect(toast).toContainText("Design deleted");
-      await expect(toast).toBeInViewport();
+      await expect(toast).toBeInViewport({ ratio: 1 });
 
       await page.getByRole("button", { name: "Undo" }).click();
       expect(await storedUrls(page)).toEqual(["first.example", "second.example", "third.example"]);
