@@ -252,8 +252,16 @@ export function QRPreview({
              bottom edge rather than flush against it. It needs somewhere to go:
              the canvas carries matching bottom padding, because this note is
              the last thing in the column and a page cannot scroll past its own
-             content. */
-          className="w-[328px] max-w-full order-last scroll-mb-2"
+             content.
+
+             The consent banner is part of that clearance. `scrollIntoView`
+             aligns against the viewport, which does not know the bottom of it
+             is spoken for — so a flat margin parked this note in the one place
+             it could not be read, and every geometric check still called it
+             visible. `--consent-inset` is what the rest of the app uses to stay
+             clear of the banner; it is 0 once the banner is answered, so this
+             costs nothing after that. */
+          className="w-[328px] max-w-full order-last scroll-mb-[calc(0.5rem+var(--consent-inset))]"
           data-testid="storage-notice"
         >
           {notice.message}
