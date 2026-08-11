@@ -811,6 +811,54 @@ test.describe("QR Code Generator", () => {
       await page.waitForTimeout(400);
       await expect(page.getByText("cannot read inverted codes", { exact: false })).toBeVisible();
     });
+
+    /* The canvas column used to be vertically centred, which positions the
+       *bounding box* — so an advisory appearing below the code pushed the code
+       up by half the height it added. Asserting the warning is merely visible
+       would not catch that; the code's own y is the thing under test. */
+    test("does not move the code when the warning appears", async ({ page }) => {
+      await page.getByPlaceholder("frontsail.ai").fill("scan-risk-test.com");
+      await page.waitForTimeout(400);
+
+      const sheet = page.getByTestId("qr-sheet");
+      const before = await sheet.boundingBox();
+
+      await page.getByRole("button", { name: "#FFFFFF" }).first().click();
+      await page.waitForTimeout(400);
+
+      const warning = page.getByText("too light to scan reliably", { exact: false });
+      await expect(warning).toBeVisible();
+      // A warning drawn off-screen would satisfy "the code didn't move" for the wrong reason
+      await expect(warning).toBeInViewport();
+
+      const after = await sheet.boundingBox();
+      expect(after.y).toBeCloseTo(before.y, 0);
+      expect(after.height).toBeCloseTo(before.height, 0);
+    });
+
+    test("does not move the code when a logo is added or removed", async ({ page }) => {
+      await page.getByPlaceholder("frontsail.ai").fill("logo-shift-test.com");
+      await page.waitForTimeout(400);
+
+      const sheet = page.getByTestId("qr-sheet");
+      const before = await sheet.boundingBox();
+
+      /* Adding a logo swaps the two-line export hint for the one-line "not
+         included in shared links" note — a smaller height change than the
+         warning, in the opposite direction, and nobody reported it. */
+      await page.locator('input[type="file"]').setInputFiles({
+        name: "logo.png",
+        mimeType: "image/png",
+        buffer: Buffer.from(ONE_BY_ONE_PNG_BASE64, "base64"),
+      });
+      await expect(page.getByRole("button", { name: "Remove" })).toBeVisible();
+      await page.waitForTimeout(400);
+      expect((await sheet.boundingBox()).y).toBeCloseTo(before.y, 0);
+
+      await page.getByRole("button", { name: "Remove" }).click();
+      await page.waitForTimeout(400);
+      expect((await sheet.boundingBox()).y).toBeCloseTo(before.y, 0);
+    });
   });
 
   test.describe("Type Persistence", () => {

@@ -146,6 +146,7 @@ export function QRPreview({
       {/* The sheet — the QR container stays mounted across states so the
           generation effect always has a live DOM node to append into */}
       <div
+        data-testid="qr-sheet"
         className={`bg-[var(--paper-card)] border-2 border-[var(--border-strong)] rounded-[2px] p-3 lg:p-6 shadow-[var(--shadow-md)] ${
           isEmpty || error ? "hidden" : ""
         }`}
