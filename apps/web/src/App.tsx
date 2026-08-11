@@ -394,8 +394,15 @@ function App() {
         {/* The engineering grid covers the whole canvas on desktop; on mobile
             it stays behind the preview only (QRPreview draws it) so the
             controls below read against plain paper */}
+        {/* Top-anchored, not centred. Centring positions the *bounding box*, so
+            the QR's offset became a function of the column's total height —
+            every advisory below it moved the code by half the height it added
+            (43px for the contrast warning, 8px for adding a logo). Mobile never
+            had the bug because it never centred; this is desktop adopting the
+            layout that was already correct. Anything added below the code from
+            here on grows downward and leaves it alone. */}
         <main
-          className={`${isDesktop ? "plico-grid" : "bg-[var(--surface-page)]"} flex-1 relative flex flex-col items-center lg:justify-center gap-[18px] min-w-0 px-4 py-6 lg:py-0 pb-[calc(6rem+var(--consent-inset))] lg:pb-[var(--consent-inset)]`}
+          className={`${isDesktop ? "plico-grid" : "bg-[var(--surface-page)]"} flex-1 relative flex flex-col items-center gap-[18px] min-w-0 px-4 py-6 lg:pt-10 pb-[calc(6rem+var(--consent-inset))] lg:pb-[var(--consent-inset)]`}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
