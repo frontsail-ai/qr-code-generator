@@ -1346,5 +1346,114 @@ test.describe("QR Code Generator", () => {
       // The offer goes away with the toast, so it cannot be taken twice
       await expect(page.getByRole("button", { name: "Undo" })).toHaveCount(0);
     });
+
+    /* #57 — the undo store used to *be* the toast, so anything that wrote a
+       message evicted the take-back, including messages announcing that
+       nothing was destroyed. */
+    test("coalesces a burst of deletes into a single offer", async ({ page }) => {
+      await seedHistory(page, ["one.example", "two.example", "three.example", "four.example"]);
+
+      // Delete the top card three times over — three separate destructive acts
+      for (let i = 0; i < 3; i++) {
+        await page.getByTestId("history-card").first().hover();
+        await page.getByRole("button", { name: "Delete" }).first().click();
+      }
+      expect(await storedUrls(page)).toEqual(["four.example"]);
+
+      await expect(page.getByTestId("toast")).toContainText("3 designs deleted");
+      await page.getByRole("button", { name: "Undo" }).click();
+
+      // All three return, in the order they were in
+      expect(await storedUrls(page)).toEqual([
+        "one.example",
+        "two.example",
+        "three.example",
+        "four.example",
+      ]);
+    });
+
+    test("copying a link does not end a pending undo", async ({ page }) => {
+      await seedHistory(page, ["keep.example", "other.example"]);
+      await page.evaluate(() => {
+        navigator.clipboard.writeText = () => Promise.resolve();
+      });
+
+      await page.getByTestId("history-card").first().hover();
+      await page.getByRole("button", { name: "Delete" }).first().click();
+      expect(await storedUrls(page)).toEqual(["other.example"]);
+
+      // A read-only action, with its own message
+      await page.getByTestId("history-card").first().hover();
+      await page.getByRole("button", { name: "Copy shareable link" }).first().click();
+      await expect(page.getByTestId("toast")).toContainText("Link copied to clipboard");
+
+      // The message covers the offer; it must not consume it
+      await expect(page.getByTestId("toast")).toContainText("Design deleted");
+      await page.getByRole("button", { name: "Undo" }).click();
+      expect(await storedUrls(page)).toEqual(["keep.example", "other.example"]);
+    });
+
+    test("saving to history does not end a pending undo", async ({ page }) => {
+      await seedHistory(page, ["keep.example"]);
+
+      await page.getByTestId("history-card").first().hover();
+      await page.getByRole("button", { name: "Delete" }).first().click();
+      expect(await storedUrls(page)).toEqual([]);
+
+      // Downloading is this app's primary action, and it saves as a side effect
+      await page.getByPlaceholder("frontsail.ai").fill("brand-new.example");
+      await page.waitForTimeout(400);
+      const download = page.waitForEvent("download");
+      await page.getByRole("button", { name: "Download PNG" }).click();
+      await download;
+      await expect(page.getByTestId("toast")).toContainText("Saved to history");
+
+      await expect(page.getByTestId("toast")).toContainText("Design deleted");
+      await page.getByRole("button", { name: "Undo" }).click();
+      expect(await storedUrls(page)).toContain("keep.example");
+    });
+
+    test("an interrupting message does not split a burst", async ({ page }) => {
+      await seedHistory(page, ["one.example", "two.example", "three.example"]);
+      await page.evaluate(() => {
+        navigator.clipboard.writeText = () => Promise.resolve();
+      });
+
+      await page.getByTestId("history-card").first().hover();
+      await page.getByRole("button", { name: "Delete" }).first().click();
+
+      await page.getByTestId("history-card").first().hover();
+      await page.getByRole("button", { name: "Copy shareable link" }).first().click();
+
+      await page.getByTestId("history-card").first().hover();
+      await page.getByRole("button", { name: "Delete" }).first().click();
+
+      // Both deletes belong to one burst even though a message landed between them
+      await expect(page.getByTestId("toast")).toContainText("2 designs deleted");
+      await page.getByRole("button", { name: "Undo" }).click();
+      expect(await storedUrls(page)).toEqual(["one.example", "two.example", "three.example"]);
+    });
+
+    test("unrelated destructive actions do not merge into one offer", async ({ page }) => {
+      await seedHistory(page, ["design.example"]);
+      await page.locator('input[type="file"]').setInputFiles({
+        name: "logo.png",
+        mimeType: "image/png",
+        buffer: Buffer.from(ONE_BY_ONE_PNG_BASE64, "base64"),
+      });
+      await expect(page.getByRole("button", { name: "Remove" })).toBeVisible();
+
+      await page.getByTestId("history-card").first().hover();
+      await page.getByRole("button", { name: "Delete" }).first().click();
+      await page.getByRole("button", { name: "Remove" }).click();
+
+      /* A single Undo reversing both a deleted design and a removed logo would
+         be a worse surprise than losing the older offer */
+      await expect(page.getByTestId("toast")).toContainText("Logo removed");
+      await page.getByRole("button", { name: "Undo" }).click();
+
+      await expect(page.getByRole("button", { name: "Remove" })).toBeVisible();
+      expect(await storedUrls(page)).toEqual([]);
+    });
   });
 });

@@ -14,6 +14,7 @@ import { useIsDesktop } from "./hooks/useMediaQuery";
 import { useLogoIntake } from "./hooks/useLogoIntake";
 import { useSavedConfigs } from "./hooks/useSavedConfigs";
 import { useToast } from "./hooks/useToast";
+import { useUndo } from "./hooks/useUndo";
 import type { FormDataMap, QRType, SaveConfigInput, SavedConfig } from "@frontsail/qr-core";
 import { decodeDesignFromUrl, encodeDesignToUrl, formatQRData } from "@frontsail/qr-core";
 import type { StorageFailure } from "./utils/safeStorage";
@@ -58,7 +59,8 @@ function App() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
-  const { toast, toastVisible, showToast, runToastAction } = useToast();
+  const { toast, toastVisible, showToast } = useToast();
+  const { undoLabel, pushUndo, runUndo } = useUndo();
 
   const { savedConfigs, saveConfig, deleteConfig, clearAllConfigs, insertConfig, restoreConfigs } =
     useSavedConfigs();
@@ -139,15 +141,16 @@ function App() {
          choose the timing of. */
       const previous = designRef.current;
       applyDesign(design);
-      showToast("copy", "Shared design loaded", {
-        label: "Undo",
-        onAction: () => applyDesign(previous),
+      pushUndo({
+        kind: "share-load",
+        text: "Shared design loaded",
+        undo: () => applyDesign(previous),
       });
     };
 
     window.addEventListener("hashchange", handleHashChange);
     return () => window.removeEventListener("hashchange", handleHashChange);
-  }, [applyDesign, showToast]);
+  }, [applyDesign, pushUndo]);
 
   const handleSave = useCallback(() => {
     // Only claim the save when there is something saved to claim
@@ -164,12 +167,12 @@ function App() {
       const previous = designRef.current;
       applyDesign(config);
       setDrawerOpen(false);
-      showToast("undo", "Design restored", {
-        label: "Undo",
-        onAction: () => applyDesign(previous),
-      });
+      /* Coalesced, an undo returns the canvas to what it held before the *first*
+         restore — which is what someone clicking through several saved designs
+         and then changing their mind actually wants back. */
+      pushUndo({ kind: "restore", text: "Design restored", undo: () => applyDesign(previous) });
     },
-    [applyDesign, showToast],
+    [applyDesign, pushUndo],
   );
 
   /* Removing history is also the one action that hands storage back, so a
@@ -180,23 +183,26 @@ function App() {
       // Nothing was deleted if the write bounced, so there is nothing to undo
       if (!reportWrite(deleteConfig(config.id))) return;
       retryPersist();
-      showToast("undo", "Design deleted", {
-        label: "Undo",
-        onAction: () => reportWrite(insertConfig(config, index), UNDO_ERRORS),
+      pushUndo({
+        kind: "delete",
+        text: "Design deleted",
+        pluralText: (count) => `${count} designs deleted`,
+        undo: () => reportWrite(insertConfig(config, index), UNDO_ERRORS),
       });
     },
-    [savedConfigs, deleteConfig, insertConfig, showToast, reportWrite, retryPersist],
+    [savedConfigs, deleteConfig, insertConfig, pushUndo, reportWrite, retryPersist],
   );
 
   const handleClearAll = useCallback(() => {
     const cleared = savedConfigs;
     if (!reportWrite(clearAllConfigs())) return;
     retryPersist();
-    showToast("undo", `Cleared ${cleared.length} saved design${cleared.length === 1 ? "" : "s"}`, {
-      label: "Undo",
-      onAction: () => reportWrite(restoreConfigs(cleared), UNDO_ERRORS),
+    pushUndo({
+      kind: "clear",
+      text: `Cleared ${cleared.length} saved design${cleared.length === 1 ? "" : "s"}`,
+      undo: () => reportWrite(restoreConfigs(cleared), UNDO_ERRORS),
     });
-  }, [savedConfigs, clearAllConfigs, restoreConfigs, showToast, reportWrite, retryPersist]);
+  }, [savedConfigs, clearAllConfigs, restoreConfigs, pushUndo, reportWrite, retryPersist]);
 
   /* The logo is the one input the app cannot reproduce for you: the file lives
      on your disk, and what the app holds is a data URL derived from it. Undo
@@ -205,8 +211,8 @@ function App() {
     const previous = designRef.current.customization.logo;
     removeLogo();
     if (!previous) return;
-    showToast("undo", "Logo removed", { label: "Undo", onAction: () => setLogo(previous) });
-  }, [removeLogo, setLogo, showToast]);
+    pushUndo({ kind: "logo", text: "Logo removed", undo: () => setLogo(previous) });
+  }, [removeLogo, setLogo, pushUndo]);
 
   const handleShare = useCallback(() => {
     const url = encodeDesignToUrl(qrType, formData, customization, shareBaseUrl());
@@ -431,7 +437,7 @@ function App() {
         </div>
       )}
 
-      <Toast toast={toast} visible={toastVisible} onAction={runToastAction} />
+      <Toast toast={toast} toastVisible={toastVisible} undoLabel={undoLabel} onUndo={runUndo} />
 
       {consentDecision === null && (
         <ConsentBanner
