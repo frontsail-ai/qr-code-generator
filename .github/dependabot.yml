@@ -53,6 +53,16 @@ updates:
       # wording) and treat this comment as the standing explanation.
       - dependency-name: "vite"
 
+      # `vite-plus` is the other half of the same pin, and the ignore above is
+      # what makes this entry necessary: Dependabot bumps `vite-plus` alone,
+      # leaves the aliased core behind, and the two halves are not compatible
+      # across versions — 0.2.9's `vite-plus` dropped the `./binding` subpath
+      # that 0.2.7's core loads its native binding through, so every `vp`
+      # invocation died before it started (#88). Upgrade the toolchain by hand
+      # instead: move `vite-plus` and the `vite` alias to the same version in
+      # all four manifests plus the root `overrides`, then relock.
+      - dependency-name: "vite-plus"
+
       # zod 4 does not typecheck against @modelcontextprotocol/sdk. The SDK
       # declares `zod: "^3.25 || ^4.0"` as both dependency and peer, but its
       # zod-compat types reject zod 4's `$strip` object schemas: `registerTool`'s
