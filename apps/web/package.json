@@ -30,7 +30,7 @@
     "jsdom": "^30.0.1",
     "tailwindcss": "^4.0.0",
     "typescript": "^7.0.2",
-    "vite": "npm:@voidzero-dev/vite-plus-core@0.2.7",
+    "vite": "npm:@voidzero-dev/vite-plus-core@0.2.9",
     "vite-plus": "0.2.9"
   }
 }
