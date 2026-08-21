@@ -36,6 +36,15 @@ test.describe("About notes", () => {
       "href",
       "https://github.com/frontsail-ai/qr-code-generator",
     );
+    // Attribution: the crawlable path from the tool to the rest of FrontSail
+    await expect(page.getByRole("link", { name: "FrontSail AI" })).toHaveAttribute(
+      "href",
+      "https://frontsail.ai",
+    );
+    await expect(page.getByRole("link", { name: "free tools" })).toHaveAttribute(
+      "href",
+      "https://frontsail.app",
+    );
   });
 
   test("the section never widens the page", async ({ page }) => {

@@ -71,6 +71,27 @@ export function AboutSection() {
             </div>
           ))}
         </dl>
+        <p className="text-[13px] leading-relaxed text-[var(--text-muted)]">
+          Made by{" "}
+          <a
+            href="https://frontsail.ai"
+            target="_blank"
+            rel="noreferrer"
+            className="underline decoration-[var(--border-strong)] underline-offset-2 hover:decoration-[var(--ink-900)]"
+          >
+            FrontSail AI
+          </a>{" "}
+          · more{" "}
+          <a
+            href="https://frontsail.app"
+            target="_blank"
+            rel="noreferrer"
+            className="underline decoration-[var(--border-strong)] underline-offset-2 hover:decoration-[var(--ink-900)]"
+          >
+            free tools
+          </a>{" "}
+          from the same team.
+        </p>
       </div>
     </section>
   );
