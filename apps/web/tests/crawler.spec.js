@@ -25,6 +25,11 @@ test.describe("A crawler without JavaScript", () => {
     expect(body).toContain("Codes never expire");
     expect(body).toContain("no sign-up, no watermark");
 
+    // Attribution links must reach the no-JS HTML: they are the link graph's
+    // only path from the tool to the hub and the products.
+    expect(body).toContain('href="https://frontsail.ai"');
+    expect(body).toContain('href="https://frontsail.app"');
+
     // The SERP snippet (#80): inside Google's ~160-char display budget, and
     // still carrying the claims that earn the click.
     const description = html.match(/<meta\s+name="description"\s+content="([^"]*)"/)?.[1];
