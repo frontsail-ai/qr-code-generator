@@ -10,6 +10,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
+import { pageLastModified } from "./lastmod.mjs";
 
 const require = createRequire(import.meta.url);
 const { JSDOM } = require("jsdom");
@@ -52,17 +53,26 @@ writeFileSync(indexPath, shell.replace(mount, `<div id="root">${html}</div>`));
 console.log(`prerender: injected ${html.length} chars into dist/index.html`);
 
 /* Second dist-finalisation duty (#82): stamp the sitemap's lastmod with the
-   build date. The hand-written date froze at 2026-07-21 while the page kept
-   changing — a lastmod that does not track reality trains crawlers to ignore
-   it. Loud on a missing tag, same as everything else in this script. */
+   date the page last actually changed. The hand-written date froze at
+   2026-07-21 while the page kept changing; the build date that replaced it
+   moved on deploys the page had no part in — an MCP release, a skill bump —
+   which Google treats the same way, because a lastmod that does not track
+   reality trains crawlers to ignore it. scripts/lastmod.mjs owns that
+   definition. Loud on a missing tag, same as everything else here. */
 const sitemapPath = fileURLToPath(new URL("../dist/sitemap.xml", import.meta.url));
 const sitemap = readFileSync(sitemapPath, "utf8");
 if (!/<lastmod>\d{4}-\d{2}-\d{2}<\/lastmod>/.test(sitemap)) {
   throw new Error("dist/sitemap.xml has no <lastmod> to stamp — update scripts/prerender.mjs");
 }
-const today = new Date().toISOString().slice(0, 10);
+const lastmod = pageLastModified();
 writeFileSync(
   sitemapPath,
-  sitemap.replace(/<lastmod>\d{4}-\d{2}-\d{2}<\/lastmod>/, `<lastmod>${today}</lastmod>`),
+  lastmod
+    ? sitemap.replace(/<lastmod>\d{4}-\d{2}-\d{2}<\/lastmod>/, `<lastmod>${lastmod}</lastmod>`)
+    : sitemap.replace(/\n[ \t]*<lastmod>\d{4}-\d{2}-\d{2}<\/lastmod>/, ""),
 );
-console.log(`prerender: stamped sitemap lastmod ${today}`);
+console.log(
+  lastmod
+    ? `prerender: stamped sitemap lastmod ${lastmod}`
+    : "prerender: no git history for the page — sitemap shipped without <lastmod>",
+);
