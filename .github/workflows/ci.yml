@@ -13,6 +13,12 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
+        with:
+          # Full history: the sitemap's <lastmod> is the page's last commit
+          # date (apps/web/scripts/lastmod.mjs), and the crawler suite checks
+          # the built sitemap against it. A shallow clone leaves both empty,
+          # which passes without proving anything.
+          fetch-depth: 0
 
       - name: Setup Vite+
         uses: voidzero-dev/setup-vp@v1

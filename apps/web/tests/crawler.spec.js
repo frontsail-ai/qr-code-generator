@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { pageLastModified } from "../scripts/lastmod.mjs";
 
 /* What a crawler that does not execute JavaScript sees (#78). This project
    runs with javaScriptEnabled: false against the built output — the same
@@ -39,16 +40,18 @@ test.describe("A crawler without JavaScript", () => {
     expect(description).toContain("MCP");
   });
 
-  test("the sitemap's lastmod tracks the build, not a hand-written date", async ({ request }) => {
+  test("the sitemap's lastmod is when the page changed, not when it built", async ({ request }) => {
     const response = await request.get("/sitemap.xml");
     expect(response.ok()).toBe(true);
     const lastmod = (await response.text()).match(/<lastmod>(\d{4}-\d{2}-\d{2})<\/lastmod>/)?.[1];
-    expect(lastmod, "lastmod must exist and be a date").toBeTruthy();
-    // Stamped by scripts/prerender.mjs at build time (#82); the suite builds
-    // right before it runs, so anything older than a couple of days is the
-    // frozen hand-written date creeping back.
-    const ageDays = (Date.now() - new Date(lastmod).getTime()) / 86_400_000;
-    expect(ageDays).toBeLessThan(2);
+    // Two dates this must never be: the hand-written one that froze at
+    // 2026-07-21, and today's, which a build-date stamp produces on deploys
+    // the page had no part in. Both read as fresh to a crawler and are how a
+    // site teaches Google to stop trusting its lastmod. The generator and
+    // this test read the same definition, so they cannot drift apart; where
+    // git history is unavailable (a shallow clone) both say "no date", and
+    // the entry ships without one rather than lying.
+    expect(lastmod ?? null).toBe(pageLastModified());
   });
 
   test("sees a styled, readable page without executing a line of JS", async ({ page }) => {
