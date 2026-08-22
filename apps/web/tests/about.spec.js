@@ -41,7 +41,7 @@ test.describe("About notes", () => {
       "href",
       "https://frontsail.ai",
     );
-    await expect(page.getByRole("link", { name: "free tools" })).toHaveAttribute(
+    await expect(page.getByRole("link", { name: "free apps" })).toHaveAttribute(
       "href",
       "https://frontsail.app",
     );

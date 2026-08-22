@@ -88,7 +88,7 @@ export function AboutSection() {
             rel="noreferrer"
             className="underline decoration-[var(--border-strong)] underline-offset-2 hover:decoration-[var(--ink-900)]"
           >
-            free tools
+            free apps
           </a>{" "}
           from the same team.
         </p>
